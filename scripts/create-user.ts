@@ -4,10 +4,10 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
 async function main() {
-  const [username, password, role = "user"] = process.argv.slice(2);
+  const [username, password, role = "user", email] = process.argv.slice(2);
 
   if (!username || !password) {
-    console.error("Usage: npx tsx scripts/create-user.ts <username> <password> [role]");
+    console.error("Usage: npx tsx scripts/create-user.ts <username> <password> [role] [email]");
     process.exit(1);
   }
 
@@ -18,8 +18,8 @@ async function main() {
 
   const user = await prisma.user.upsert({
     where: { username },
-    update: { passwordHash, role },
-    create: { username, passwordHash, role },
+    update: { passwordHash, role, ...(email ? { email } : {}) },
+    create: { username, passwordHash, role, email },
   });
 
   console.log(`User "${user.username}" saved with role "${user.role}".`);
