@@ -25,6 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await prisma.user.findUnique({ where: { username } });
         console.log("[auth][debug]", {
           username,
+          passwordLength: password.length,
           found: !!user,
           emailVerified: user?.emailVerified,
           hashPrefix: user?.passwordHash?.slice(0, 7),
