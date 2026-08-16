@@ -50,15 +50,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name ?? user.email,
           role: user.role,
           subscribed: user.subscribed,
+          preferredLanguage: user.preferredLanguage,
         };
       },
     }),
   ],
   callbacks: {
+    // Everything the session needs is cached directly on the JWT at sign-in
+    // — no database round trip on every request. subscribed/preferredLanguage
+    // can go briefly stale for a signed-in user until their next login (the
+    // places that actually gate behavior on them — the chat API's message
+    // limit and language personalization — re-read fresh values from the
+    // database directly instead of trusting the session for that).
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id!;
         token.role = user.role ?? "user";
+        token.subscribed = user.subscribed ?? false;
+        token.preferredLanguage = user.preferredLanguage ?? "English";
       }
       return token;
     },
@@ -66,15 +75,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
-
-        // Re-read subscribed status on every session check so admin changes
-        // take effect immediately, without waiting for the JWT to expire.
-        const freshUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { subscribed: true, preferredLanguage: true },
-        });
-        session.user.subscribed = freshUser?.subscribed ?? false;
-        session.user.preferredLanguage = freshUser?.preferredLanguage ?? "English";
+        session.user.subscribed = Boolean(token.subscribed);
+        session.user.preferredLanguage = (token.preferredLanguage as string) ?? "English";
       }
       return session;
     },

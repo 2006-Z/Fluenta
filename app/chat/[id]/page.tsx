@@ -19,22 +19,23 @@ export default async function ChatConversationPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-
   const { id } = await params;
-  const conversation = await prisma.conversation.findUnique({
-    where: { id },
-    include: {
-      messages: { orderBy: { createdAt: "asc" } },
-      attachments: {
-        orderBy: { createdAt: "asc" },
-        select: { id: true, fileName: true, fileType: true },
+  const [session, conversation] = await Promise.all([
+    auth(),
+    prisma.conversation.findUnique({
+      where: { id },
+      include: {
+        messages: { orderBy: { createdAt: "asc" } },
+        attachments: {
+          orderBy: { createdAt: "asc" },
+          select: { id: true, fileName: true, fileType: true },
+        },
+        lessons: { orderBy: { createdAt: "desc" }, take: 1 },
       },
-      lessons: { orderBy: { createdAt: "desc" }, take: 1 },
-    },
-  });
+    }),
+  ]);
 
+  if (!session?.user?.id) redirect("/login");
   if (!conversation || conversation.userId !== session.user.id) notFound();
 
   const isReady = conversation.status === "ready";
