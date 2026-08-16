@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireAdminToken } from "@/lib/adminAuth";
 import { listEnvVars, createEnvVar } from "@/lib/vercel";
 
-export async function GET() {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+export async function GET(request: Request) {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -37,8 +36,7 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

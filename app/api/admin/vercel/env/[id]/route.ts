@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireAdminToken } from "@/lib/adminAuth";
 import { updateEnvVar, deleteEnvVar } from "@/lib/vercel";
 
 const schema = z.object({ value: z.string().min(1) });
@@ -9,8 +9,7 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -36,8 +35,7 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

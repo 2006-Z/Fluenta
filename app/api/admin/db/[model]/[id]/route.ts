@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdminToken } from "@/lib/adminAuth";
 import { ADMIN_MODELS, getDelegate, editableFieldNames } from "@/lib/adminModels";
 
 export async function GET(
   request: Request,
   context: { params: Promise<{ model: string; id: string }> }
 ) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -31,8 +30,7 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ model: string; id: string }> }
 ) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -72,8 +70,7 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ model: string; id: string }> }
 ) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdminToken } from "@/lib/adminAuth";
 import { ADMIN_MODELS, getDelegate } from "@/lib/adminModels";
 
 const PAGE_SIZE = 25;
@@ -8,8 +8,7 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ model: string }> }
 ) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -65,24 +65,20 @@ export function AdminDeploymentsView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [depRes, envRes, domRes] = await Promise.all([
-        fetch("/api/admin/vercel/deployments"),
-        fetch("/api/admin/vercel/env"),
-        fetch("/api/admin/vercel/domains"),
-      ]);
-      const depData = await depRes.json();
-      const envData = await envRes.json();
-      const domData = await domRes.json();
+      const res = await fetch("/api/admin/vercel/overview");
+      const data = await res.json();
 
-      if (!depRes.ok && depData.error?.includes("VERCEL_TOKEN")) {
+      if (!res.ok && data.error?.includes("VERCEL_TOKEN")) {
         setNotConfigured(true);
       } else {
         setNotConfigured(false);
       }
 
-      if (depRes.ok) setDeployments(depData.deployments ?? []);
-      if (envRes.ok) setEnvs(envData.envs ?? []);
-      if (domRes.ok) setDomains(domData.domains ?? []);
+      if (res.ok) {
+        setDeployments(data.deployments ?? []);
+        setEnvs(data.envs ?? []);
+        setDomains(data.domains ?? []);
+      }
     } finally {
       setLoading(false);
     }

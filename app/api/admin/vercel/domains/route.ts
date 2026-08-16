@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdminToken } from "@/lib/adminAuth";
 import { listDomains } from "@/lib/vercel";
 
-export async function GET() {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+export async function GET(request: Request) {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

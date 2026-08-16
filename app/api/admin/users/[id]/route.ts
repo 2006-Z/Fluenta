@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { auth } from "@/lib/auth";
+import { requireAdminToken } from "@/lib/adminAuth";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -15,8 +15,7 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  if (!(await requireAdminToken(request))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -74,14 +73,14 @@ export async function DELETE(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth();
-  if (session?.user.role !== "admin") {
+  const token = await requireAdminToken(request);
+  if (!token) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { id } = await context.params;
 
-  if (id === session.user.id) {
+  if (id === token.id) {
     return NextResponse.json(
       { error: "You can't delete your own account from here — use Account settings instead." },
       { status: 400 }
