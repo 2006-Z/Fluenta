@@ -7,10 +7,14 @@ import toast from "react-hot-toast";
 
 export function OtpVerifyForm({
   email,
-  onVerified,
+  title = "Check your email",
+  onSubmit,
+  onResend,
 }: {
   email: string;
-  onVerified: () => void;
+  title?: string;
+  onSubmit: (code: string) => Promise<{ ok: boolean; error?: string }>;
+  onResend: () => Promise<{ ok: boolean; error?: string }>;
 }) {
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -23,19 +27,13 @@ export function OtpVerifyForm({
     setError(null);
     setVerifying(true);
     try {
-      const res = await fetch("/api/verify-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Invalid code");
+      const result = await onSubmit(code);
+      if (!result.ok) {
+        setError(result.error ?? "Invalid code");
         setShake((n) => n + 1);
         setVerifying(false);
         return;
       }
-      onVerified();
     } catch {
       setError("Network error — please try again");
       setShake((n) => n + 1);
@@ -46,12 +44,12 @@ export function OtpVerifyForm({
   async function handleResend() {
     setResending(true);
     try {
-      await fetch("/api/resend-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      toast.success("New code sent");
+      const result = await onResend();
+      if (result.ok) {
+        toast.success("New code sent");
+      } else {
+        toast.error(result.error ?? "Couldn't resend code");
+      }
     } catch {
       toast.error("Couldn't resend code");
     } finally {
@@ -68,7 +66,7 @@ export function OtpVerifyForm({
     >
       <div className="mb-2 flex flex-col items-center gap-2 text-center">
         <MailCheck size={28} className="text-accent" />
-        <h1 className="text-xl font-semibold text-foreground">Check your email</h1>
+        <h1 className="text-xl font-semibold text-foreground">{title}</h1>
         <p className="text-sm text-muted">
           Enter the 6-digit code we sent to {email}
         </p>

@@ -18,7 +18,6 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
-        username: true,
         name: true,
         role: true,
         subscribed: true,
@@ -113,7 +112,6 @@ export default async function AdminPage() {
             <thead>
               <tr className="border-b border-border text-muted">
                 <th className="px-5 py-2 font-medium">Name</th>
-                <th className="px-5 py-2 font-medium">Username</th>
                 <th className="px-5 py-2 font-medium">Sessions</th>
                 <th className="px-5 py-2 font-medium">Role</th>
                 <th className="px-5 py-2 font-medium">Subscribed</th>
@@ -138,7 +136,6 @@ export default async function AdminPage() {
                         {user.name ?? "—"}
                       </Link>
                     </td>
-                    <td className="px-5 py-3 text-muted">@{user.username}</td>
                     <td className="px-5 py-3 text-muted">
                       {user.conversations.length}
                     </td>

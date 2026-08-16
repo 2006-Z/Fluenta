@@ -7,9 +7,8 @@ import toast from "react-hot-toast";
 
 type UserData = {
   id: string;
-  username: string;
   name: string | null;
-  email: string | null;
+  email: string;
   role: string;
   subscribed: boolean;
 };
@@ -17,14 +16,13 @@ type UserData = {
 export function AdminUserEditForm({ user }: { user: UserData }) {
   const router = useRouter();
   const [name, setName] = useState(user.name ?? "");
-  const [username, setUsername] = useState(user.username);
-  const [email, setEmail] = useState(user.email ?? "");
+  const [email, setEmail] = useState(user.email);
   const [newPassword, setNewPassword] = useState("");
   const [subscribed, setSubscribed] = useState(user.subscribed);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingSubscription, setSavingSubscription] = useState(false);
-  const [confirmUsername, setConfirmUsername] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -43,7 +41,7 @@ export function AdminUserEditForm({ user }: { user: UserData }) {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      await updateUser({ name, username, email });
+      await updateUser({ name, email });
       toast.success("Profile updated");
       router.refresh();
     } catch (err) {
@@ -155,26 +153,13 @@ export function AdminUserEditForm({ user }: { user: UserData }) {
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">Username</span>
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-accent">
-            <span className="text-muted">@</span>
-            <input
-              required
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-transparent text-sm text-foreground outline-none"
-            />
-          </div>
-        </label>
-
-        <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">Email</span>
           <input
+            required
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            placeholder="No email on file"
           />
         </label>
 
@@ -243,12 +228,12 @@ export function AdminUserEditForm({ user }: { user: UserData }) {
           <div className="flex flex-col gap-3">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-foreground">
-                Type <span className="font-mono">{user.username}</span> to confirm
+                Type <span className="font-mono">{user.email}</span> to confirm
               </span>
               <input
                 autoFocus
-                value={confirmUsername}
-                onChange={(e) => setConfirmUsername(e.target.value)}
+                value={confirmEmail}
+                onChange={(e) => setConfirmEmail(e.target.value)}
                 className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-danger"
               />
             </label>
@@ -256,7 +241,7 @@ export function AdminUserEditForm({ user }: { user: UserData }) {
               <button
                 type="button"
                 onClick={handleDelete}
-                disabled={deleting || confirmUsername !== user.username}
+                disabled={deleting || confirmEmail !== user.email}
                 className="flex h-10 items-center justify-center gap-2 rounded-lg bg-danger px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {deleting ? (
@@ -270,7 +255,7 @@ export function AdminUserEditForm({ user }: { user: UserData }) {
                 type="button"
                 onClick={() => {
                   setShowDeleteConfirm(false);
-                  setConfirmUsername("");
+                  setConfirmEmail("");
                 }}
                 disabled={deleting}
                 className="flex h-10 items-center justify-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"

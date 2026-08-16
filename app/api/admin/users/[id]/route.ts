@@ -6,13 +6,6 @@ import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required").max(60).optional(),
-  username: z
-    .string()
-    .trim()
-    .min(3)
-    .max(24)
-    .regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers, and underscores allowed")
-    .optional(),
   email: z.string().trim().email().optional(),
   password: z.string().min(6, "Password must be at least 6 characters").optional(),
   subscribed: z.boolean().optional(),
@@ -37,10 +30,9 @@ export async function PATCH(
     );
   }
 
-  const { name, username, email, password, subscribed } = parsed.data;
+  const { name, email, password, subscribed } = parsed.data;
   const data: Record<string, string | boolean> = {};
   if (name !== undefined) data.name = name;
-  if (username !== undefined) data.username = username;
   if (email !== undefined) data.email = email;
   if (subscribed !== undefined) data.subscribed = subscribed;
   if (password !== undefined) data.passwordHash = await bcrypt.hash(password, 10);
@@ -55,7 +47,6 @@ export async function PATCH(
       data,
       select: {
         id: true,
-        username: true,
         name: true,
         email: true,
         role: true,
@@ -71,7 +62,7 @@ export async function PATCH(
       error.code === "P2002"
     ) {
       return NextResponse.json(
-        { error: "That handle or email is already in use" },
+        { error: "That email is already in use" },
         { status: 409 }
       );
     }

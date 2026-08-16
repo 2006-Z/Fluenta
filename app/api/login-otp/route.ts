@@ -16,29 +16,35 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email.toLowerCase();
-  const pending = await prisma.pendingSignup.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email } });
 
-  if (pending) {
+  if (user && user.emailVerified) {
+    await prisma.otpCode.deleteMany({ where: { userId: user.id, purpose: "login" } });
+
     const code = generateOtpCode();
-    await prisma.pendingSignup.update({
-      where: { email },
-      data: { code, verified: false, expiresAt: new Date(Date.now() + OTP_TTL_MS) },
+    await prisma.otpCode.create({
+      data: {
+        userId: user.id,
+        code,
+        purpose: "login",
+        expiresAt: new Date(Date.now() + OTP_TTL_MS),
+      },
     });
 
     const { error: emailError } = await resend.emails.send({
       from: env.EMAIL_FROM,
       to: email,
-      subject: "Your new Fluenta verification code",
+      subject: "Your Fluenta login code",
       html: `
-        <p>Your new verification code is:</p>
+        <p>Your login code is:</p>
         <p style="font-size: 28px; font-weight: 700; letter-spacing: 4px;">${code}</p>
-        <p>This code expires in 10 minutes.</p>
+        <p>This code expires in 10 minutes. If you didn't request this, you can ignore this email.</p>
       `,
     });
     if (emailError) {
-      console.error("Failed to resend OTP email:", emailError);
+      console.error("Failed to send login OTP email:", emailError);
       return NextResponse.json(
-        { error: "Couldn't send verification email — try again in a moment" },
+        { error: "Couldn't send login code — try again in a moment" },
         { status: 502 }
       );
     }

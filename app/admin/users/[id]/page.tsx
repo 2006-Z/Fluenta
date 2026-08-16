@@ -20,7 +20,6 @@ export default async function AdminUserPage({
     where: { id },
     select: {
       id: true,
-      username: true,
       name: true,
       email: true,
       role: true,
@@ -40,7 +39,7 @@ export default async function AdminUserPage({
         Back to admin
       </Link>
       <h1 className="mb-6 text-2xl font-semibold text-foreground">
-        {user.name ?? user.username}
+        {user.name ?? user.email}
       </h1>
       <AdminUserEditForm user={user} />
     </div>

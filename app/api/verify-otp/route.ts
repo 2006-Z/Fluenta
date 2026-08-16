@@ -14,32 +14,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const { email, code } = parsed.data;
+  const email = parsed.data.email.toLowerCase();
+  const { code } = parsed.data;
 
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    return NextResponse.json({ error: "Invalid code" }, { status: 400 });
-  }
+  const pending = await prisma.pendingSignup.findUnique({ where: { email } });
 
-  const otp = await prisma.otpCode.findFirst({
-    where: { userId: user.id, purpose: "signup" },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (!otp || otp.code !== code || otp.expiresAt < new Date()) {
+  if (!pending || pending.code !== code || pending.expiresAt < new Date()) {
     return NextResponse.json(
       { error: "That code is invalid or has expired" },
       { status: 400 }
     );
   }
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerified: true },
-    }),
-    prisma.otpCode.deleteMany({ where: { userId: user.id, purpose: "signup" } }),
-  ]);
+  await prisma.pendingSignup.update({
+    where: { email },
+    data: { verified: true },
+  });
 
   return NextResponse.json({ ok: true });
 }

@@ -4,25 +4,40 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
-import { Loader2, Lock, AtSign, Mail, UserRound, Languages } from "lucide-react";
+import { Loader2, Lock, Mail, UserRound, KeyRound, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { OtpVerifyForm } from "@/components/OtpVerifyForm";
 
+type SignupStep = "email" | "otp" | "details";
+type LoginStep = "email" | "method" | "password" | "otp";
+
+const cardClass =
+  "flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-border bg-surface p-8 shadow-sm";
+const inputWrapClass =
+  "flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-accent";
+const inputClass = "w-full bg-transparent text-sm text-foreground outline-none";
+const primaryButtonClass =
+  "flex h-10 items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-accent to-accent-hover text-sm font-medium text-accent-foreground shadow-md shadow-accent/20 transition-all hover:brightness-110 hover:shadow-lg hover:shadow-accent/30 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const secondaryButtonClass =
+  "flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-background text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:opacity-60";
+const backLinkClass =
+  "flex items-center gap-1 self-start text-sm text-muted hover:text-foreground";
+
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
+  const isSignup = mode === "signup";
+
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [preferredLanguage, setPreferredLanguage] = useState("English");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(0);
-  const [awaitingOtp, setAwaitingOtp] = useState(false);
 
-  const isSignup = mode === "signup";
+  const [signupStep, setSignupStep] = useState<SignupStep>("email");
+  const [loginStep, setLoginStep] = useState<LoginStep>("email");
 
   function fail(message: string) {
     setError(message);
@@ -30,19 +45,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     toast.error(message);
   }
 
-  async function completeSignIn(welcomeMessage: string, startNewChat = false) {
-    const result = await signIn("credentials", {
-      username,
-      password,
-      redirect: false,
-    });
-
-    if (result?.error) {
-      fail("Invalid username or password");
-      setLoading(false);
-      return;
-    }
-
+  async function afterSignIn(welcomeMessage: string, startNewChat = false) {
     toast.success(welcomeMessage);
 
     if (startNewChat) {
@@ -64,51 +67,345 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     router.refresh();
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  // ---------- Signup ----------
+
+  async function handleSignupEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
     try {
-      if (isSignup) {
-        const res = await fetch("/api/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password, name, email, preferredLanguage }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          fail(data.error ?? "Something went wrong");
-          setLoading(false);
-          return;
-        }
+      const res = await fetch("/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        fail(data.error ?? "Something went wrong");
         setLoading(false);
-        setAwaitingOtp(true);
         return;
       }
-
-      await completeSignIn("Welcome back!");
+      setLoading(false);
+      setSignupStep("otp");
     } catch {
       fail("Network error — please try again");
       setLoading(false);
     }
   }
 
-  if (awaitingOtp) {
+  async function handleSignupOtpSubmit(code: string) {
+    const res = await fetch("/api/verify-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error ?? "Invalid code" };
+    setSignupStep("details");
+    return { ok: true };
+  }
+
+  async function handleSignupOtpResend() {
+    const res = await fetch("/api/resend-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    return res.ok ? { ok: true } : { ok: false, error: data.error };
+  }
+
+  async function handleDetailsSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/signup/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        fail(data.error ?? "Something went wrong");
+        setLoading(false);
+        return;
+      }
+
+      const result = await signIn("credentials", { email, password, redirect: false });
+      if (result?.error) {
+        toast.success("Account created — please log in");
+        router.push("/login");
+        return;
+      }
+      await afterSignIn("Welcome to Fluenta!", true);
+    } catch {
+      fail("Network error — please try again");
+      setLoading(false);
+    }
+  }
+
+  // ---------- Login ----------
+
+  function handleLoginEmailSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setError(null);
+    setLoginStep("method");
+  }
+
+  async function handlePasswordSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const result = await signIn("credentials", { email, password, redirect: false });
+    if (result?.error) {
+      fail("Invalid email or password");
+      setLoading(false);
+      return;
+    }
+    await afterSignIn("Welcome back!");
+  }
+
+  async function handleSendLoginOtp() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/login-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        fail(data.error ?? "Something went wrong");
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+      setLoginStep("otp");
+    } catch {
+      fail("Network error — please try again");
+      setLoading(false);
+    }
+  }
+
+  async function handleLoginOtpSubmit(code: string) {
+    const result = await signIn("credentials", { email, otp: code, redirect: false });
+    if (result?.error) {
+      return { ok: false, error: "Invalid or expired code" };
+    }
+    await afterSignIn("Welcome back!");
+    return { ok: true };
+  }
+
+  async function handleLoginOtpResend() {
+    const res = await fetch("/api/login-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    return res.ok ? { ok: true } : { ok: false, error: data.error };
+  }
+
+  // ---------- Render: OTP steps (shared component) ----------
+
+  if (isSignup && signupStep === "otp") {
     return (
       <OtpVerifyForm
         email={email}
-        onVerified={() => completeSignIn("Welcome to Fluenta!", true)}
+        onSubmit={handleSignupOtpSubmit}
+        onResend={handleSignupOtpResend}
       />
     );
   }
 
+  if (!isSignup && loginStep === "otp") {
+    return (
+      <OtpVerifyForm
+        email={email}
+        title="Enter your login code"
+        onSubmit={handleLoginOtpSubmit}
+        onResend={handleLoginOtpResend}
+      />
+    );
+  }
+
+  // ---------- Render: signup details step ----------
+
+  if (isSignup && signupStep === "details") {
+    return (
+      <motion.form
+        onSubmit={handleDetailsSubmit}
+        animate={shake ? { x: [0, -8, 8, -6, 6, 0] } : {}}
+        transition={{ duration: 0.4 }}
+        className={cardClass}
+      >
+        <div className="mb-2 text-center">
+          <h1 className="text-xl font-semibold text-foreground">Almost done</h1>
+          <p className="mt-1 text-sm text-muted">Set your name and a password</p>
+        </div>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-foreground">Name</span>
+          <div className={inputWrapClass}>
+            <UserRound size={16} className="text-muted" />
+            <input
+              required
+              autoFocus
+              maxLength={60}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+              placeholder="Your name"
+              autoComplete="name"
+            />
+          </div>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-foreground">Password</span>
+          <div className={inputWrapClass}>
+            <Lock size={16} className="text-muted" />
+            <input
+              required
+              type="password"
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              placeholder="••••••••"
+              autoComplete="new-password"
+            />
+          </div>
+        </label>
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+
+        <button type="submit" disabled={loading} className={`mt-2 ${primaryButtonClass}`}>
+          {loading && <Loader2 size={16} className="animate-spin" />}
+          Create account
+        </button>
+      </motion.form>
+    );
+  }
+
+  // ---------- Render: login method choice ----------
+
+  if (!isSignup && loginStep === "method") {
+    return (
+      <motion.div
+        animate={shake ? { x: [0, -8, 8, -6, 6, 0] } : {}}
+        transition={{ duration: 0.4 }}
+        className={cardClass}
+      >
+        <button
+          type="button"
+          onClick={() => setLoginStep("email")}
+          className={backLinkClass}
+        >
+          <ArrowLeft size={14} />
+          Back
+        </button>
+
+        <div className="mb-2 text-center">
+          <h1 className="text-xl font-semibold text-foreground">Welcome back</h1>
+          <p className="mt-1 text-sm text-muted">{email}</p>
+        </div>
+
+        {error && <p className="text-center text-sm text-danger">{error}</p>}
+
+        <button
+          type="button"
+          onClick={() => setLoginStep("password")}
+          className={primaryButtonClass}
+        >
+          <Lock size={16} />
+          Log in with password
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSendLoginOtp}
+          disabled={loading}
+          className={secondaryButtonClass}
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+          Email me a login code
+        </button>
+      </motion.div>
+    );
+  }
+
+  // ---------- Render: login password step ----------
+
+  if (!isSignup && loginStep === "password") {
+    return (
+      <motion.form
+        onSubmit={handlePasswordSubmit}
+        animate={shake ? { x: [0, -8, 8, -6, 6, 0] } : {}}
+        transition={{ duration: 0.4 }}
+        className={cardClass}
+      >
+        <button
+          type="button"
+          onClick={() => setLoginStep("method")}
+          className={backLinkClass}
+        >
+          <ArrowLeft size={14} />
+          Back
+        </button>
+
+        <div className="mb-2 text-center">
+          <h1 className="text-xl font-semibold text-foreground">Enter your password</h1>
+          <p className="mt-1 text-sm text-muted">{email}</p>
+        </div>
+
+        <label className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">Password</span>
+            <Link
+              href="/forgot-password"
+              className="text-xs font-medium text-accent hover:text-accent-hover"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <div className={inputWrapClass}>
+            <Lock size={16} className="text-muted" />
+            <input
+              required
+              autoFocus
+              type="password"
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
+          </div>
+        </label>
+
+        {error && <p className="text-sm text-danger">{error}</p>}
+
+        <button type="submit" disabled={loading} className={primaryButtonClass}>
+          {loading && <Loader2 size={16} className="animate-spin" />}
+          Log in
+        </button>
+      </motion.form>
+    );
+  }
+
+  // ---------- Render: email step (shared entry point) ----------
+
   return (
     <motion.form
-      onSubmit={handleSubmit}
+      onSubmit={isSignup ? handleSignupEmailSubmit : handleLoginEmailSubmit}
       animate={shake ? { x: [0, -8, 8, -6, 6, 0] } : {}}
       transition={{ duration: 0.4 }}
-      className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-border bg-surface p-8 shadow-sm"
+      className={cardClass}
     >
       <div className="mb-2 text-center">
         <h1 className="text-xl font-semibold text-foreground">
@@ -121,127 +418,28 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         </p>
       </div>
 
-      {isSignup && (
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">Name</span>
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-accent">
-            <UserRound size={16} className="text-muted" />
-            <input
-              required
-              autoFocus
-              maxLength={60}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-transparent text-sm text-foreground outline-none"
-              placeholder="Your name"
-              autoComplete="name"
-            />
-          </div>
-        </label>
-      )}
-
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-foreground">Username</span>
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-accent">
-          <AtSign size={16} className="text-muted" />
+        <span className="text-sm font-medium text-foreground">Email</span>
+        <div className={inputWrapClass}>
+          <Mail size={16} className="text-muted" />
           <input
             required
-            autoFocus={!isSignup}
-            minLength={3}
-            maxLength={24}
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full bg-transparent text-sm text-foreground outline-none"
-            placeholder="yourusername"
-            autoComplete="username"
-          />
-        </div>
-      </label>
-
-      {isSignup && (
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">Email</span>
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-accent">
-            <Mail size={16} className="text-muted" />
-            <input
-              required
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-transparent text-sm text-foreground outline-none"
-              placeholder="you@example.com"
-              autoComplete="email"
-            />
-          </div>
-        </label>
-      )}
-
-      {isSignup && (
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">
-            Feedback language
-          </span>
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-accent">
-            <Languages size={16} className="text-muted" />
-            <select
-              value={preferredLanguage}
-              onChange={(e) => setPreferredLanguage(e.target.value)}
-              className="w-full bg-background text-sm text-foreground outline-none"
-            >
-              <option value="English" className="bg-background text-foreground">
-                English
-              </option>
-              <option value="Hindi" className="bg-background text-foreground">
-                Hindi
-              </option>
-              <option value="Hinglish" className="bg-background text-foreground">
-                Hinglish (Hindi + English mix)
-              </option>
-            </select>
-          </div>
-          <span className="text-xs text-muted">
-            We&apos;ll explain how to improve your answers in this language —
-            your mock interview itself always stays in English.
-          </span>
-        </label>
-      )}
-
-      <label className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-foreground">Password</span>
-          {!isSignup && (
-            <Link
-              href="/forgot-password"
-              className="text-xs font-medium text-accent hover:text-accent-hover"
-            >
-              Forgot password?
-            </Link>
-          )}
-        </div>
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-accent">
-          <Lock size={16} className="text-muted" />
-          <input
-            required
-            type="password"
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-transparent text-sm text-foreground outline-none"
-            placeholder="••••••••"
-            autoComplete={isSignup ? "new-password" : "current-password"}
+            autoFocus
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputClass}
+            placeholder="you@example.com"
+            autoComplete="email"
           />
         </div>
       </label>
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="mt-2 flex h-10 items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-accent to-accent-hover text-sm font-medium text-accent-foreground shadow-md shadow-accent/20 transition-all hover:brightness-110 hover:shadow-lg hover:shadow-accent/30 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-      >
+      <button type="submit" disabled={loading} className={`mt-2 ${primaryButtonClass}`}>
         {loading && <Loader2 size={16} className="animate-spin" />}
-        {isSignup ? "Sign up" : "Log in"}
+        Continue
       </button>
 
       <p className="text-center text-sm text-muted">

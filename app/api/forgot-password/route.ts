@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       to: email,
       subject: "Reset your Fluenta password",
       html: `
-        <p>Hi ${user.name ?? user.username},</p>
+        <p>Hi ${user.name ?? "there"},</p>
         <p>Click the link below to reset your Fluenta password. This link expires in 1 hour.</p>
         <p><a href="${resetUrl}">${resetUrl}</a></p>
         <p>If you didn't request this, you can safely ignore this email.</p>

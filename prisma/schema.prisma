@@ -14,8 +14,7 @@ datasource db {
 
 model User {
   id            String               @id @default(cuid())
-  username      String               @unique
-  email         String?              @unique
+  email         String               @unique
   name          String?
   passwordHash  String
   role          String               @default("user")
@@ -26,6 +25,15 @@ model User {
   conversations Conversation[]
   resetTokens   PasswordResetToken[]
   otpCodes      OtpCode[]
+}
+
+model PendingSignup {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  code      String
+  verified  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model OtpCode {
