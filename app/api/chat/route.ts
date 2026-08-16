@@ -10,7 +10,6 @@ import { onboardingSchema, ONBOARDING_SYSTEM_PROMPT } from "@/lib/interviewOnboa
 import { interviewReplySchema, formatInterviewReply } from "@/lib/interviewReply";
 import { kickoffSchema } from "@/lib/interviewKickoff";
 import { summarizeConversation } from "@/lib/summarize";
-import { buildInterviewPlan } from "@/lib/interviewPlan";
 import { generateInterviewReport } from "@/lib/interviewReport";
 import { generateLesson } from "@/lib/lessons";
 import { pickLessonFormat } from "@/lib/lessonFormats";
@@ -125,16 +124,9 @@ export async function POST(request: Request) {
       console.error("Research failed:", error);
     }
 
-    let plan: string | null = null;
-    try {
-      plan = await buildInterviewPlan(company, role, research);
-    } catch (error) {
-      console.error("Plan generation failed:", error);
-    }
-
     await prisma.conversation.update({
       where: { id: conversationId },
-      data: { research, plan, status: "ready" },
+      data: { research, status: "ready" },
     });
 
     const kickoffSystemPrompt = buildInterviewSystemPrompt({
@@ -148,13 +140,13 @@ export async function POST(request: Request) {
         model: chatModel,
         system: kickoffSystemPrompt,
         prompt:
-          "The candidate has just confirmed the role and company. Pick your interviewer name and write your opening greeting.",
+          "The candidate has just confirmed the role and company. Pick your interviewer name, write your opening greeting, and write the short interview plan.",
         schema: kickoffSchema,
       });
 
       await prisma.conversation.update({
         where: { id: conversationId },
-        data: { interviewerName: kickoff.interviewerName },
+        data: { interviewerName: kickoff.interviewerName, plan: kickoff.plan },
       });
 
       const created = await prisma.message.create({
@@ -165,7 +157,7 @@ export async function POST(request: Request) {
         reply: kickoff.greeting,
         profileReady: true,
         messageId: created.id,
-        planReady: Boolean(plan),
+        planReady: Boolean(kickoff.plan),
       });
     } catch (error) {
       console.error("Kickoff generation failed:", error);
