@@ -10,7 +10,14 @@ import { getToken } from "next-auth/jwt";
  * saved round trip multiplies.
  */
 export async function requireAdminToken(request: Request) {
-  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  // secureCookie must be explicit — production is always https, and without
+  // this getToken() reads the non-`__Secure-`-prefixed cookie name, which
+  // silently picks up a stale session if one happens to still be present.
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === "production",
+  });
   if (token?.role !== "admin") return null;
   return token;
 }
