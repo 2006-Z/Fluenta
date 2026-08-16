@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Users, MessagesSquare, Layers, Crown } from "lucide-react";
+import { Users, MessagesSquare, Layers, Crown, Database, Cloud } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -57,9 +57,27 @@ export default async function AdminPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-10">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-foreground">Admin</h1>
-        <p className="mt-1 text-muted">Usage overview across all users.</p>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Admin</h1>
+          <p className="mt-1 text-muted">Usage overview across all users.</p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/admin/database"
+            className="flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
+          >
+            <Database size={15} />
+            Database
+          </Link>
+          <Link
+            href="/admin/deployments"
+            className="flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
+          >
+            <Cloud size={15} />
+            Deployments
+          </Link>
+        </div>
       </div>
 
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
