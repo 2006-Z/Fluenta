@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String               @id @default(cuid())
+  username      String               @unique
+  email         String?              @unique
+  name          String?
+  passwordHash  String
+  role          String               @default("user")
+  subscribed    Boolean              @default(false)
+  preferredLanguage String           @default("English")
+  emailVerified Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  conversations Conversation[]
+  resetTokens   PasswordResetToken[]
+  otpCodes      OtpCode[]
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  purpose   String   @default("signup")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Conversation {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String?
+  company        String?
+  role           String?
+  interviewerName String?
+  jobDescription String?
+  resumeText     String?
+  research       String?
+  contextSummary String?
+  summarizedUpToCount Int  @default(0)
+  status         String    @default("pending")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  messages       Message[]
+  attachments    Attachment[]
+
+  @@index([userId])
+}
+
+model Attachment {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  fileName       String
+  fileType       String
+  fileData       Bytes
+  extractedText  String?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String
+  content        String
+  isOnboarding   Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  feedback       MessageFeedback?
+
+  @@index([conversationId])
+}
+
+model MessageFeedback {
+  id           String   @id @default(cuid())
+  messageId    String   @unique
+  message      Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  rating       String?
+  comment      String?
+  reported     Boolean  @default(false)
+  reportReason String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
