@@ -147,11 +147,29 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   // ---------- Login ----------
 
-  function handleLoginEmailSubmit(e: React.FormEvent) {
+  async function handleLoginEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
     setError(null);
-    setLoginStep("method");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, purpose: "login" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        fail(data.error ?? "No account found with that email");
+        setLoading(false);
+        return;
+      }
+      setLoading(false);
+      setLoginStep("method");
+    } catch {
+      fail("Network error — please try again");
+      setLoading(false);
+    }
   }
 
   async function handlePasswordSubmit(e: React.FormEvent) {
