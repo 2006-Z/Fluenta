@@ -16,6 +16,10 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (pathname === "/" && isLoggedIn) {
+    return NextResponse.redirect(new URL("/chat", req.nextUrl.origin));
+  }
+
   if (isAdminRoute && req.auth?.user.role !== "admin") {
     return NextResponse.redirect(new URL("/chat", req.nextUrl.origin));
   }
