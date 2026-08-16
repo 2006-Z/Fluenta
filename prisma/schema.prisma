@@ -70,15 +70,32 @@ model Conversation {
   jobDescription String?
   resumeText     String?
   research       String?
+  plan           String?
   contextSummary String?
   summarizedUpToCount Int  @default(0)
   status         String    @default("pending")
+  completedAt    DateTime?
+  report         String?
+  reportVerdict  String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   messages       Message[]
   attachments    Attachment[]
+  lessons        Lesson[]
 
   @@index([userId])
+}
+
+model Lesson {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  format         String
+  title          String
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
 
 model Attachment {

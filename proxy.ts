@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getToken } from "next-auth/jwt";
+import type { NextRequest } from "next/server";
 
-export default auth((req) => {
-  const isLoggedIn = !!req.auth;
+export default async function proxy(req: NextRequest) {
+  // Middleware only needs to know "logged in?" and "role?" — both live in the
+  // JWT already, so decode the token directly instead of going through
+  // auth()'s full session pipeline (which re-hits the database on every
+  // request via the session callback). Page components still call auth()
+  // for the fields they actually need.
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isLoggedIn = !!token;
   const { pathname } = req.nextUrl;
   const isAdminRoute = pathname.startsWith("/admin");
   const isProtected =
@@ -20,10 +27,10 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/chat", req.nextUrl.origin));
   }
 
-  if (isAdminRoute && req.auth?.user.role !== "admin") {
+  if (isAdminRoute && token?.role !== "admin") {
     return NextResponse.redirect(new URL("/chat", req.nextUrl.origin));
   }
-});
+}
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|api/auth).*)"],

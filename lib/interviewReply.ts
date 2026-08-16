@@ -39,6 +39,11 @@ export const interviewReplySchema = z.object({
     .describe(
       "Set this ONLY if the candidate explicitly asks to change the language their answer-feedback is given in (e.g. 'give feedback in Hindi', 'switch to Hinglish', 'English please'). Null in the normal case."
     ),
+  interviewComplete: z
+    .boolean()
+    .describe(
+      "True if this interview has now reached a natural close — either you (as interviewer) are wrapping up after covering a reasonably full arc (rapport, behavioral, role-specific/technical, and a closing question), or the candidate explicitly asked to end/stop the interview. When true, 'nextQuestion' should instead be a warm closing line (e.g. thanking them, saying you'll be in touch) rather than another question. False in the normal case, while the interview is still ongoing."
+    ),
 });
 
 export type InterviewReply = z.infer<typeof interviewReplySchema>;
@@ -71,7 +76,11 @@ export function formatInterviewReply(
     : reply.answerFeedback.trim();
   parts.push(`{{feedback-block}}${feedbackBlockInner}{{/feedback-block}}`);
 
-  parts.push(`**${reply.nextQuestion.trim()}**`);
+  parts.push(
+    reply.interviewComplete
+      ? reply.nextQuestion.trim()
+      : `**${reply.nextQuestion.trim()}**`
+  );
 
   return parts.join("\n\n");
 }

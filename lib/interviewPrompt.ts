@@ -56,6 +56,7 @@ Your reply has five separate parts, matching the response schema exactly, and ea
 4. "nextQuestion" — the next interview question, written exactly once, only here.
 5. "newTargetMentioned" — this conversation is locked to ${company} / ${role}. Set this field ONLY if the candidate's latest message asks about or expresses interest in a genuinely different company and/or role. Leave it null in the normal case.
 6. "languageChangeRequested" — set this ONLY if the candidate explicitly asks to change the language of their answer-feedback (e.g. "give feedback in Hindi", "switch to English"). Leave it null in the normal case.
+7. "interviewComplete" — set this true once you've covered a reasonably full interview arc (rapport opener, 2-3 behavioral questions, 2-3 role-specific/technical or situational questions, and it feels natural to wrap up — typically after 6-10 candidate answers total, not fewer), OR the candidate explicitly asks to end/stop. When true, "nextQuestion" must instead hold a short, warm closing line (thank them for their time, no further question). Otherwise always false.
 Before answering, double check: does "reaction" contain judgment of their answer's quality, correction wording, or a question? Does "nextQuestion" appear anywhere else? If so, rewrite until each fact lives in exactly one field.
 ${
   preferredLanguage !== "English"

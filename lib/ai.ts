@@ -6,5 +6,5 @@ const openaiCompatible = createOpenAI({
   apiKey: env.AI_API_KEY,
 });
 
-export const chatModel = openaiCompatible.chat(env.AI_MODEL);
-export const researchModel = openaiCompatible.chat("perplexity/sonar");
+export const chatModel = openaiCompatible.chat("anthropic/claude-sonnet-5");
+export const researchModel = openaiCompatible.chat("perplexity/sonar-pro");

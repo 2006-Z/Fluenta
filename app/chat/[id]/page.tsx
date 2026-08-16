@@ -7,6 +7,9 @@ import { buildInterviewGreeting } from "@/lib/interviewPrompt";
 import { ChatWindow } from "@/components/ChatWindow";
 import { ResearchPanel } from "@/components/ResearchPanel";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
+import { InterviewPlanPanel } from "@/components/InterviewPlanPanel";
+import { InterviewReportPanel } from "@/components/InterviewReportPanel";
+import { LessonPanel } from "@/components/LessonPanel";
 
 const ONBOARDING_GREETING =
   "Hi! I'm your AI interview coach. Tell me the company and role you're preparing for — for example, \"Verification Analyst at InstaVeritas\" — and I'll research it and get started.";
@@ -28,6 +31,7 @@ export default async function ChatConversationPage({
         orderBy: { createdAt: "asc" },
         select: { id: true, fileName: true, fileType: true },
       },
+      lessons: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
 
@@ -67,6 +71,22 @@ export default async function ChatConversationPage({
         <ResearchPanel
           research={conversation.research}
           subscribed={session.user.subscribed}
+        />
+      )}
+      {isReady && conversation.plan && (
+        <InterviewPlanPanel plan={conversation.plan} />
+      )}
+      {conversation.report && (
+        <InterviewReportPanel
+          report={conversation.report}
+          verdict={conversation.reportVerdict}
+        />
+      )}
+      {conversation.lessons[0] && (
+        <LessonPanel
+          format={conversation.lessons[0].format}
+          title={conversation.lessons[0].title}
+          content={conversation.lessons[0].content}
         />
       )}
       <AttachmentsPanel attachments={conversation.attachments} />

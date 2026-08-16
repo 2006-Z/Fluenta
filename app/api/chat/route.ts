@@ -10,6 +10,10 @@ import { onboardingSchema, ONBOARDING_SYSTEM_PROMPT } from "@/lib/interviewOnboa
 import { interviewReplySchema, formatInterviewReply } from "@/lib/interviewReply";
 import { kickoffSchema } from "@/lib/interviewKickoff";
 import { summarizeConversation } from "@/lib/summarize";
+import { buildInterviewPlan } from "@/lib/interviewPlan";
+import { generateInterviewReport } from "@/lib/interviewReport";
+import { generateLesson } from "@/lib/lessons";
+import { pickLessonFormat } from "@/lib/lessonFormats";
 
 export const runtime = "nodejs";
 
@@ -121,9 +125,16 @@ export async function POST(request: Request) {
       console.error("Research failed:", error);
     }
 
+    let plan: string | null = null;
+    try {
+      plan = await buildInterviewPlan(company, role, research);
+    } catch (error) {
+      console.error("Plan generation failed:", error);
+    }
+
     await prisma.conversation.update({
       where: { id: conversationId },
-      data: { research, status: "ready" },
+      data: { research, plan, status: "ready" },
     });
 
     const kickoffSystemPrompt = buildInterviewSystemPrompt({
@@ -154,6 +165,7 @@ export async function POST(request: Request) {
         reply: kickoff.greeting,
         profileReady: true,
         messageId: created.id,
+        planReady: Boolean(plan),
       });
     } catch (error) {
       console.error("Kickoff generation failed:", error);
@@ -269,11 +281,68 @@ export async function POST(request: Request) {
       data: { conversationId, role: "assistant", content: replyText },
     });
 
+    let interviewJustCompleted = false;
+    if (object.interviewComplete && !conversation.completedAt) {
+      interviewJustCompleted = true;
+      try {
+        const fullHistory = await prisma.message.findMany({
+          where: { conversationId },
+          orderBy: { createdAt: "asc" },
+        });
+        const reportMessages: ModelMessage[] = fullHistory.map((m) => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: m.content,
+        }));
+
+        const report = await generateInterviewReport({
+          company: conversation.company!,
+          role: conversation.role!,
+          messages: reportMessages,
+        });
+        const { formatReportMarkdown } = await import("@/lib/interviewReport");
+
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: {
+            completedAt: new Date(),
+            report: formatReportMarkdown(report, conversation.company!, conversation.role!),
+            reportVerdict: report.overallVerdict,
+          },
+        });
+
+        if (report.overallVerdict === "needs-improvement") {
+          const usedLessons = await prisma.lesson.findMany({
+            where: { conversation: { userId } },
+            select: { format: true },
+          });
+          const formatId = pickLessonFormat(usedLessons.map((l) => l.format));
+          const lesson = await generateLesson({
+            formatId,
+            company: conversation.company!,
+            role: conversation.role!,
+            report,
+            messages: reportMessages,
+          });
+          await prisma.lesson.create({
+            data: {
+              conversationId,
+              format: formatId,
+              title: lesson.title,
+              content: JSON.stringify(lesson.content),
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Report/lesson generation failed:", error);
+      }
+    }
+
     return NextResponse.json({
       reply: replyText,
       profileReady: true,
       messageId: created.id,
       summarizedUpToCount,
+      interviewComplete: interviewJustCompleted,
     });
   } catch (error) {
     console.error("Chat completion failed:", error);

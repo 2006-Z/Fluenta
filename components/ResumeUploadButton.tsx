@@ -8,34 +8,60 @@ export function ResumeUploadButton({
   conversationId,
   disabled,
   onUploadStart,
+  onUploadProgress,
   onUploadEnd,
 }: {
   conversationId: string;
   disabled?: boolean;
   onUploadStart: () => void;
+  onUploadProgress?: (percent: number) => void;
   onUploadEnd: (success: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
 
     onUploadStart();
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("conversationId", conversationId);
-      const res = await fetch("/api/attachments", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
-      toast.success(`"${file.name}" attached — your coach will use it going forward`);
-      onUploadEnd(true);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't upload file");
+    onUploadProgress?.(0);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("conversationId", conversationId);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/attachments");
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        onUploadProgress?.(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      let data: { error?: string } = {};
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        // ignore parse failure, fall through to status check below
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        toast.success(`"${file.name}" attached — your coach will use it going forward`);
+        onUploadEnd(true);
+      } else {
+        toast.error(data.error ?? "Couldn't upload file");
+        onUploadEnd(false);
+      }
+    };
+
+    xhr.onerror = () => {
+      toast.error("Couldn't upload file");
       onUploadEnd(false);
-    }
+    };
+
+    xhr.send(formData);
   }
 
   return (

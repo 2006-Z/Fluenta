@@ -38,6 +38,7 @@ export function ChatWindow({
   const [profileReady, setProfileReady] = useState(isReady);
   const [sending, setSending] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [failed, setFailed] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
   const [input, setInput] = useState("");
@@ -104,6 +105,10 @@ export function ChatWindow({
         setSummarizedUpToCount(data.summarizedUpToCount);
       }
 
+      if (data.interviewComplete) {
+        router.refresh();
+      }
+
       const replyId =
         typeof data.messageId === "string" ? data.messageId : `reply-${Date.now()}`;
       setJustArrivedId(replyId);
@@ -162,7 +167,11 @@ export function ChatWindow({
               />
             )}
             {uploadingFile && (
-              <StatusIndicator label="Reading your file…" icon="file" />
+              <StatusIndicator
+                label={uploadProgress < 100 ? "Uploading…" : "Reading your file…"}
+                icon="file"
+                progress={uploadProgress < 100 ? uploadProgress : undefined}
+              />
             )}
             {failed && (
               <div className="flex items-center gap-1.5 text-xs text-danger">
@@ -193,9 +202,14 @@ export function ChatWindow({
             <ResumeUploadButton
               conversationId={conversationId}
               disabled={uploadingFile}
-              onUploadStart={() => setUploadingFile(true)}
+              onUploadStart={() => {
+                setUploadingFile(true);
+                setUploadProgress(0);
+              }}
+              onUploadProgress={setUploadProgress}
               onUploadEnd={(success) => {
                 setUploadingFile(false);
+                setUploadProgress(0);
                 if (success) router.refresh();
               }}
             />

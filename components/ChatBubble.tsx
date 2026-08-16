@@ -117,7 +117,7 @@ export function ChatBubble({
         >
           <div
             className={cn(
-              "flex max-w-[85%] flex-col gap-2 rounded-2xl px-4 py-2.5 text-sm leading-relaxed sm:max-w-[75%]",
+              "flex max-w-[85%] flex-col items-start gap-2 rounded-2xl px-4 py-2.5 text-sm leading-relaxed sm:max-w-[75%]",
               isUser
                 ? "rounded-br-sm border border-accent/20 bg-accent/15 text-foreground"
                 : "rounded-bl-sm border border-border bg-surface text-foreground"
