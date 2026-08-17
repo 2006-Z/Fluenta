@@ -36,7 +36,7 @@ export default async function ChatConversationPage({
   if (!session?.user?.id) redirect("/login");
   if (!conversation || conversation.userId !== session.user.id) notFound();
 
-  const isReady = conversation.status === "ready";
+  const isReady = conversation.status === "ready" || conversation.status === "completed";
   const greeting = isReady
     ? buildInterviewGreeting(conversation.company!, conversation.role!)
     : ONBOARDING_GREETING;

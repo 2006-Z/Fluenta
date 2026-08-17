@@ -14,7 +14,8 @@ export default async function ChatInsightsPlanPage({
 
   if (!session?.user?.id) redirect("/login");
   if (!conversation || conversation.userId !== session.user.id) notFound();
-  if (conversation.status !== "ready" || conversation.plan.length === 0) notFound();
+  const isReady = conversation.status === "ready" || conversation.status === "completed";
+  if (!isReady || conversation.plan.length === 0) notFound();
 
   return (
     <div className="flex min-h-[calc(100dvh-3rem)] flex-col">

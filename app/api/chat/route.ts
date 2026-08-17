@@ -13,6 +13,7 @@ import { summarizeConversation } from "@/lib/summarize";
 import { generateInterviewReport } from "@/lib/interviewReport";
 import { generateLesson } from "@/lib/lessons";
 import { pickLessonFormat } from "@/lib/lessonFormats";
+import { restartIntentSchema, buildRestartIntentSystemPrompt } from "@/lib/restartIntent";
 
 export const runtime = "nodejs";
 
@@ -60,7 +61,9 @@ export async function POST(request: Request) {
   });
 
   // Onboarding: no target set yet, so this message should be establishing one.
-  if (conversation.status !== "ready") {
+  // "completed" is handled separately below — that's a finished interview
+  // awaiting a restart decision, not a conversation still being set up.
+  if (conversation.status !== "ready" && conversation.status !== "completed") {
     const onboardingHistory = await prisma.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: "asc" },
@@ -166,6 +169,104 @@ export async function POST(request: Request) {
         { status: 502 }
       );
     }
+  }
+
+  // Returning to a conversation whose interview already finished: don't
+  // silently treat the new message as another interview answer. Figure out
+  // whether the candidate wants to practice this same interview again, or
+  // is asking about something else — restart only once that's clear.
+  if (conversation.status === "completed") {
+    const recentHistory = await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: "asc" },
+      take: -12,
+    });
+    const recentMessages: ModelMessage[] = recentHistory.map((m) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+    }));
+
+    let intent;
+    try {
+      const result = await generateObject({
+        model: chatModel,
+        system: buildRestartIntentSystemPrompt({
+          company: conversation.company!,
+          role: conversation.role!,
+          verdict: conversation.reportVerdict,
+        }),
+        messages: recentMessages,
+        schema: restartIntentSchema,
+      });
+      intent = result.object;
+    } catch (error) {
+      console.error("Restart-intent check failed:", error);
+      return NextResponse.json(
+        { error: "The AI coach is unavailable right now. Please try again." },
+        { status: 502 }
+      );
+    }
+
+    if (intent.wantsToRestart === true) {
+      const company = conversation.company!;
+      const role = conversation.role!;
+      const kickoffSystemPrompt = buildInterviewSystemPrompt({
+        company,
+        role,
+        research: conversation.research,
+        contextSummary: conversation.contextSummary,
+        interviewerName: conversation.interviewerName,
+      });
+
+      try {
+        const { object: kickoff } = await generateObject({
+          model: chatModel,
+          system: kickoffSystemPrompt,
+          prompt:
+            "The candidate wants to practice this same interview again from the start. Pick your interviewer name (reuse the existing one given above if there is one), write a fresh opening greeting that briefly acknowledges this is a new attempt, and write a new short interview plan.",
+          schema: kickoffSchema,
+        });
+
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: {
+            status: "ready",
+            completedAt: null,
+            interviewerName: kickoff.interviewerName,
+            plan: kickoff.plan,
+            planStepsDone: 0,
+          },
+        });
+
+        const created = await prisma.message.create({
+          data: { conversationId, role: "assistant", content: kickoff.greeting },
+        });
+
+        return NextResponse.json({
+          reply: kickoff.greeting,
+          profileReady: true,
+          messageId: created.id,
+          interviewComplete: false,
+          planStepsDone: 0,
+        });
+      } catch (error) {
+        console.error("Restart kickoff failed:", error);
+        return NextResponse.json(
+          { error: "The AI coach is unavailable right now. Please try again." },
+          { status: 502 }
+        );
+      }
+    }
+
+    const created = await prisma.message.create({
+      data: { conversationId, role: "assistant", content: intent.reply },
+    });
+
+    return NextResponse.json({
+      reply: intent.reply,
+      profileReady: true,
+      messageId: created.id,
+    });
   }
 
   // Ongoing interview: enforce the free-tier message limit.
@@ -308,6 +409,7 @@ export async function POST(request: Request) {
         await prisma.conversation.update({
           where: { id: conversationId },
           data: {
+            status: "completed",
             completedAt: new Date(),
             report: formatReportMarkdown(report, conversation.company!, conversation.role!),
             reportVerdict: report.overallVerdict,

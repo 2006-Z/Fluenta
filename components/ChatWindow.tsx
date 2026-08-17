@@ -41,7 +41,7 @@ export function ChatWindow({
   const [sending, setSending] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [failed, setFailed] = useState(false);
+  const [failedMessage, setFailedMessage] = useState<string | null>(null);
   const [limitReached, setLimitReached] = useState(false);
   const [input, setInput] = useState("");
   const [justArrivedId, setJustArrivedId] = useState<string | null>(null);
@@ -62,22 +62,9 @@ export function ChatWindow({
     inputRef.current?.focus();
   }, []);
 
-  async function handleSend() {
-    const text = input.trim();
-    if (!text || sending) return;
-
-    setInput("");
-    setFailed(false);
+  async function sendMessage(text: string) {
+    setFailedMessage(null);
     setWillSummarize(messages.length - summarizedUpToCount >= SUMMARY_TRIGGER);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `local-${Date.now()}`,
-        role: "user",
-        content: text,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
     setSending(true);
 
     try {
@@ -134,12 +121,34 @@ export function ChatWindow({
         },
       ]);
     } catch {
-      setFailed(true);
+      setFailedMessage(text);
       toast.error("Couldn't reach your AI coach");
     } finally {
       setSending(false);
       inputRef.current?.focus();
     }
+  }
+
+  async function handleSend() {
+    const text = input.trim();
+    if (!text || sending) return;
+
+    setInput("");
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `local-${Date.now()}`,
+        role: "user",
+        content: text,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    await sendMessage(text);
+  }
+
+  async function handleResend() {
+    if (!failedMessage || sending) return;
+    await sendMessage(failedMessage);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -184,10 +193,18 @@ export function ChatWindow({
                 progress={uploadProgress < 100 ? uploadProgress : undefined}
               />
             )}
-            {failed && (
-              <div className="flex items-center gap-1.5 text-xs text-danger">
+            {failedMessage && (
+              <div className="flex items-center gap-2 text-xs text-danger">
                 <AlertCircle size={13} />
-                Something went wrong. Please try sending your message again.
+                Something went wrong.
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={sending}
+                  className="font-medium underline underline-offset-2 hover:text-danger/80 disabled:opacity-60"
+                >
+                  Resend
+                </button>
               </div>
             )}
             <div ref={scrollRef} />

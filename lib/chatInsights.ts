@@ -18,7 +18,7 @@ export function insightsTitle(conversation: {
   role: string | null;
   title: string | null;
 }) {
-  const isReady = conversation.status === "ready";
+  const isReady = conversation.status === "ready" || conversation.status === "completed";
   return isReady && conversation.company && conversation.role
     ? `${conversation.role} at ${conversation.company}`
     : conversation.title ?? "New interview";
