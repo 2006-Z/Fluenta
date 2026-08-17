@@ -33,7 +33,7 @@ export default async function ChatInsightsReportPage({
           </div>
         </div>
       </div>
-      <InterviewReportPanel report={conversation.report} verdict={conversation.reportVerdict} />
+      <InterviewReportPanel report={conversation.report} hireProbability={conversation.hireProbability} />
     </div>
   );
 }

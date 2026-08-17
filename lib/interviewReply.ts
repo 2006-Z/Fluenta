@@ -61,7 +61,12 @@ export const interviewReplySchema = z.object({
   interviewComplete: z
     .boolean()
     .describe(
-      "True if this was the LAST round and it has now reached a natural close, or the candidate explicitly asked to end/stop the interview. When true, 'nextQuestion' should instead be a warm closing line rather than another question."
+      "True if this was the LAST round and it has now reached a natural close, or the candidate explicitly asked to end/stop the interview. When true, 'nextQuestion' should instead be a SHORT interviewer sign-off (1 sentence, e.g. thank them and say they're free to go) — do NOT give feedback, a verdict, or any assessment here, since the coach will follow up separately with all of that right after."
+    ),
+  companyKnowledgeGapShown: z
+    .boolean()
+    .describe(
+      "True if the candidate's answer in THIS turn reveals they don't actually know basic facts about the company or role (e.g. confused about what the company does, contradicts the research, or admits they haven't looked into it). False in the normal case, and always false for 'informal' messages."
     ),
 });
 

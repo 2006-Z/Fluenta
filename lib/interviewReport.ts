@@ -3,10 +3,13 @@ import { generateObject, type ModelMessage } from "ai";
 import { chatModel } from "@/lib/ai";
 
 export const reportSchema = z.object({
-  overallVerdict: z
-    .enum(["strong", "needs-improvement"])
+  hireProbability: z
+    .number()
+    .int()
+    .min(0)
+    .max(100)
     .describe(
-      "Honest overall verdict on this interview performance. Use 'needs-improvement' whenever there are real, addressable gaps — don't default to 'strong' just to be nice."
+      "Your honest estimate of the percentage chance this specific performance, in this specific mock interview, would realistically lead to an offer for this specific role/company. Judge it for real based on the transcript — do not default to a round number like 50 out of habit."
     ),
   summary: z
     .string()
@@ -22,7 +25,12 @@ export const reportSchema = z.object({
   languageNotes: z
     .string()
     .describe(
-      "1-3 sentences on the candidate's English fluency/grammar across the interview specifically (separate from interview-content feedback)."
+      "1-3 sentences on the candidate's spoken-English fluency/grammar across the interview specifically (separate from interview-content feedback). Do not mention spelling, punctuation, or capitalization — those don't matter for a spoken interview."
+    ),
+  lessonRecommended: z
+    .boolean()
+    .describe(
+      "True only if a dedicated follow-up lesson would genuinely help this specific candidate improve on a concrete, teachable gap. False if performance was already strong, or if the gaps are too broad/vague for one focused lesson to meaningfully address."
     ),
 });
 
@@ -38,7 +46,7 @@ export async function generateInterviewReport({
   messages: ModelMessage[];
 }): Promise<InterviewReport> {
   const systemPrompt = `
-You are an experienced hiring manager writing an honest, constructive post-interview performance report for a candidate who just finished a mock interview for the "${role}" role at "${company}". Base your assessment ONLY on what's in the conversation transcript below. Be honest and specific, not falsely encouraging — a report that calls everything "strong" when it wasn't helps no one.
+You are an experienced hiring manager writing an honest, constructive post-interview performance report for a candidate who just finished a mock interview for the "${role}" role at "${company}". Base your assessment ONLY on what's in the conversation transcript below. Be honest and specific, not falsely encouraging — a report that calls everything great when it wasn't helps no one.
 `.trim();
 
   const { object } = await generateObject({
@@ -54,6 +62,7 @@ You are an experienced hiring manager writing an honest, constructive post-inter
 export function formatReportMarkdown(report: InterviewReport, company: string, role: string) {
   const parts: string[] = [];
   parts.push(`## Interview report — ${role} at ${company}`);
+  parts.push(`**Estimated hire probability: ${report.hireProbability}%**`);
   parts.push(report.summary);
   if (report.strengths.length > 0) {
     parts.push(`**Strengths**\n${report.strengths.map((s) => `- ${s}`).join("\n")}`);

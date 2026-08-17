@@ -12,6 +12,7 @@ import { kickoffSchema } from "@/lib/interviewKickoff";
 import { confirmIntentSchema, buildConfirmIntentSystemPrompt } from "@/lib/interviewConfirm";
 import { summarizeConversation } from "@/lib/summarize";
 import { generateInterviewReport } from "@/lib/interviewReport";
+import { generateWrapupMessage } from "@/lib/interviewWrapup";
 import { generateLesson } from "@/lib/lessons";
 import { pickLessonFormat } from "@/lib/lessonFormats";
 import { restartIntentSchema, buildRestartIntentSystemPrompt } from "@/lib/restartIntent";
@@ -180,11 +181,18 @@ export async function POST(request: Request) {
     try {
       const { object: confirmAsk } = await generateObject({
         model: chatModel,
-        system: buildConfirmIntentSystemPrompt({ company, role, preferredLanguage }),
+        system: buildConfirmIntentSystemPrompt({ company, role, research, preferredLanguage }),
         prompt:
-          "The research above was just completed and shared with the candidate. Ask if they're ready to begin the mock interview.",
+          "The research above was just completed. Ask whether the candidate already knows about the company and role, or would like you to walk them through it first.",
         schema: confirmIntentSchema,
       });
+
+      if (confirmAsk.explainedResearch) {
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: { researchExplainedBeforeInterview: true },
+        });
+      }
 
       const created = await prisma.message.create({
         data: { conversationId, role: "assistant", content: confirmAsk.reply, isOnboarding: true },
@@ -223,6 +231,7 @@ export async function POST(request: Request) {
         system: buildConfirmIntentSystemPrompt({
           company: conversation.company!,
           role: conversation.role!,
+          research: conversation.research,
           preferredLanguage,
         }),
         messages: recentMessages,
@@ -235,6 +244,13 @@ export async function POST(request: Request) {
         { error: "The AI coach is unavailable right now. Please try again." },
         { status: 502 }
       );
+    }
+
+    if (intent.explainedResearch && !conversation.researchExplainedBeforeInterview) {
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { researchExplainedBeforeInterview: true },
+      });
     }
 
     if (intent.wantsToStart !== true) {
@@ -310,7 +326,7 @@ export async function POST(request: Request) {
         system: buildRestartIntentSystemPrompt({
           company: conversation.company!,
           role: conversation.role!,
-          verdict: conversation.reportVerdict,
+          hireProbability: conversation.hireProbability,
         }),
         messages: recentMessages,
         schema: restartIntentSchema,
@@ -346,6 +362,7 @@ export async function POST(request: Request) {
             roundsDone: 0,
             estimatedTurns: kickoff.estimatedTurns,
             interviewTurnsDone: 0,
+            companyGapDetected: false,
           },
         });
 
@@ -501,10 +518,11 @@ export async function POST(request: Request) {
     const roundsDone = object.roundComplete
       ? Math.min(conversation.roundsDone + 1, Math.max(rounds.length - 1, 0))
       : conversation.roundsDone;
+    const companyGapDetected = conversation.companyGapDetected || object.companyKnowledgeGapShown;
 
     await prisma.conversation.update({
       where: { id: conversationId },
-      data: { interviewTurnsDone, roundsDone },
+      data: { interviewTurnsDone, roundsDone, companyGapDetected },
     });
 
     let interviewJustCompleted = false;
@@ -533,11 +551,11 @@ export async function POST(request: Request) {
             status: "completed",
             completedAt: new Date(),
             report: formatReportMarkdown(report, conversation.company!, conversation.role!),
-            reportVerdict: report.overallVerdict,
+            hireProbability: report.hireProbability,
           },
         });
 
-        if (report.overallVerdict === "needs-improvement") {
+        if (report.lessonRecommended) {
           const usedLessons = await prisma.lesson.findMany({
             where: { conversation: { userId } },
             select: { format: true },
@@ -559,8 +577,21 @@ export async function POST(request: Request) {
             },
           });
         }
+
+        const wrapupText = await generateWrapupMessage({
+          company: conversation.company!,
+          role: conversation.role!,
+          report,
+          includeResearchWalkthrough:
+            !conversation.researchExplainedBeforeInterview && companyGapDetected,
+          research: conversation.research,
+          preferredLanguage,
+        });
+        await prisma.message.create({
+          data: { conversationId, role: "assistant", content: wrapupText, isOnboarding: true },
+        });
       } catch (error) {
-        console.error("Report/lesson generation failed:", error);
+        console.error("Report/lesson/wrapup generation failed:", error);
       }
     }
 

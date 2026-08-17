@@ -19,17 +19,15 @@ export type RestartIntentResult = z.infer<typeof restartIntentSchema>;
 export function buildRestartIntentSystemPrompt({
   company,
   role,
-  verdict,
+  hireProbability,
 }: {
   company: string;
   role: string;
-  verdict: string | null;
+  hireProbability: number | null;
 }) {
   return `
 You are a warm, fluent AI interview-prep coach. The candidate already completed a mock interview for the "${role}" role at "${company}" earlier in this same conversation${
-    verdict
-      ? ` (their result: ${verdict === "strong" ? "a strong performance" : "needs improvement"})`
-      : ""
+    hireProbability !== null ? ` (estimated hire probability from that attempt: ${hireProbability}%)` : ""
   }. They've now sent a new message here, after that interview had already ended. Using the conversation for context, figure out whether they want to practice this same interview again from scratch, or whether they're asking about something else entirely — don't assume either way without a clear signal from what they've actually said.
 `.trim();
 }

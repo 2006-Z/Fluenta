@@ -78,7 +78,9 @@ model Conversation {
   status         String    @default("pending")
   completedAt    DateTime?
   report         String?
-  reportVerdict  String?
+  hireProbability Int?
+  researchExplainedBeforeInterview Boolean @default(false)
+  companyGapDetected Boolean @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   messages       Message[]

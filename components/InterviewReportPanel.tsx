@@ -8,15 +8,15 @@ import { cn } from "@/lib/utils";
 
 export function InterviewReportPanel({
   report,
-  verdict,
+  hireProbability,
   variant = "bar",
 }: {
   report: string;
-  verdict: string | null;
+  hireProbability: number | null;
   variant?: "bar" | "inline";
 }) {
   const [open, setOpen] = useState(true);
-  const isStrong = verdict === "strong";
+  const isStrong = hireProbability !== null && hireProbability >= 60;
   const inline = variant === "inline";
 
   return (
@@ -33,7 +33,7 @@ export function InterviewReportPanel({
       >
         <ClipboardCheck size={14} />
         Interview report
-        {verdict && (
+        {hireProbability !== null && (
           <span
             className={
               isStrong
@@ -41,7 +41,7 @@ export function InterviewReportPanel({
                 : "rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent"
             }
           >
-            {isStrong ? "Strong performance" : "Needs improvement"}
+            {hireProbability}% hire probability
           </span>
         )}
         <motion.span
