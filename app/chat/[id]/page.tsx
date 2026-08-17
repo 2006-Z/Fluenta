@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Briefcase, Sparkles } from "lucide-react";
+import { ArrowLeft, Briefcase, PanelRight, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildInterviewGreeting } from "@/lib/interviewPrompt";
 import { ChatWindow } from "@/components/ChatWindow";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
-import { InsightsMenu } from "@/components/InsightsMenu";
 import { cn } from "@/lib/utils";
 
 const ONBOARDING_GREETING =
@@ -46,6 +45,11 @@ export default async function ChatConversationPage({
       : conversation.title ?? "New interview";
 
   const planTotal = conversation.plan.length;
+  const hasInsights =
+    (isReady && Boolean(conversation.research)) ||
+    (isReady && planTotal > 0) ||
+    Boolean(conversation.report) ||
+    Boolean(conversation.lessons[0]);
 
   return (
     <div className="flex h-[calc(100dvh-3rem)] flex-col">
@@ -81,15 +85,15 @@ export default async function ChatConversationPage({
               </div>
             )}
           </div>
-          <InsightsMenu
-            research={isReady ? conversation.research : null}
-            subscribed={session.user.subscribed}
-            plan={isReady ? conversation.plan : undefined}
-            planStepsDone={conversation.planStepsDone}
-            report={conversation.report}
-            reportVerdict={conversation.reportVerdict}
-            lesson={conversation.lessons[0] ?? null}
-          />
+          {hasInsights && (
+            <Link
+              href={`/chat/${id}/insights`}
+              aria-label="Interview insights"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+            >
+              <PanelRight size={16} />
+            </Link>
+          )}
         </div>
       </div>
       <AttachmentsPanel attachments={conversation.attachments} />
