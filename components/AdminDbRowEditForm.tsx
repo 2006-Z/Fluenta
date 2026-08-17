@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import type { FieldDef } from "@/lib/adminModels";
 import { humanizeFieldName } from "@/lib/utils";
 
-type RowValue = string | number | boolean | null;
+type RowValue = string | number | boolean | null | unknown[] | Record<string, unknown>;
 
 export function AdminDbRowEditForm({
   modelKey,
@@ -83,10 +83,12 @@ export function AdminDbRowEditForm({
                 <span className="text-sm font-medium text-muted">
                   {humanizeFieldName(field.name)}
                 </span>
-                <p className="rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-muted">
+                <p className="whitespace-pre-wrap rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-muted">
                   {value === null || value === undefined || value === ""
                     ? "—"
-                    : String(value)}
+                    : typeof value === "object"
+                      ? JSON.stringify(value, null, 2)
+                      : String(value)}
                 </p>
               </div>
             );

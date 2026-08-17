@@ -1,15 +1,16 @@
 import { z } from "zod";
 
 export const interviewReplySchema = z.object({
-  reaction: z
-    .string()
+  messageType: z
+    .enum(["informal", "formal", "mixed"])
     .describe(
-      "A short 1-2 sentence in-character reaction to the CONTENT of the candidate's last answer (acknowledge, gently probe, or react to what they said) — the way a real interviewer would respond. Must NOT mention grammar/wording/corrections at all (those go only in the separate corrections field), and must NOT contain or preview any question (the question goes only in nextQuestion). This field is reaction only — nothing else."
+      "Classify the candidate's last message. 'informal' = casual chat, small talk, or a logistics remark with no actual interview-answer content (e.g. 'give me a sec', 'haha ok', 'can you repeat that'). 'formal' = a real interview answer with no unrelated chit-chat mixed in. 'mixed' = it contains both a real interview answer AND some casual/unrelated remark in the same message."
     ),
-  answerFeedback: z
+  fluentaReply: z
     .string()
+    .nullable()
     .describe(
-      "Honest, substantive feedback on whether the candidate's answer actually addressed what was asked — was it relevant, complete, specific enough (real examples/details vs vague generalities)? If they missed part of the question or gave a shallow answer, say so plainly and briefly note what a stronger answer would include. 1-2 sentences. This is about the CONTENT/quality of their answer, not grammar — that goes only in corrections."
+      "Your own casual, friendly voice as Fluenta (the coach) — NOT the interviewer persona. Required (non-null) when messageType is 'informal' or 'mixed', responding briefly and warmly to the casual part. Null when messageType is 'formal'."
     ),
   corrections: z
     .array(
@@ -20,36 +21,47 @@ export const interviewReplySchema = z.object({
       })
     )
     .describe(
-      "Every English mistake (grammar, word choice, phrasing, sentence structure, and punctuation/pause boundaries — missing commas, run-on sentences, wrong sentence breaks) in the candidate's last message. Do NOT flag capitalization-only differences (e.g. 'hello' vs 'Hello', a name in lowercase) — this is a spoken-interview practice tool, letter casing doesn't matter when speaking. Empty array if there were no real mistakes."
+      "Real grammar mistakes only — wrong verb tense, subject-verb disagreement, wrong word choice/preposition, or phrasing so unclear a listener would be confused. This is a SPOKEN-interview practice tool: NEVER flag spelling, typos, punctuation, or capitalization (e.g. lowercase 'i', missing commas/periods) — none of that matters when speaking aloud. Empty array if there were no real grammar issues, or if messageType is 'informal'."
+    ),
+  interviewerReaction: z
+    .string()
+    .nullable()
+    .describe(
+      "The interviewer's short 1-2 sentence in-character reaction to the CONTENT of the candidate's answer. Required (non-null) when messageType is 'formal' or 'mixed'. Null when messageType is 'informal' — the interviewer stays silent for purely casual messages, only Fluenta responds."
+    ),
+  answerFeedback: z
+    .string()
+    .nullable()
+    .describe(
+      "Honest, substantive feedback on whether the answer actually addressed what was asked. Required (non-null) when messageType is 'formal' or 'mixed'. Null when messageType is 'informal'."
     ),
   nextQuestion: z
     .string()
+    .nullable()
     .describe(
-      "The next interview question to ask, following naturally from the conversation so far. State it exactly once — do not repeat or paraphrase it in the reaction field."
+      "The next interview question. Required (non-null) when messageType is 'formal' or 'mixed' — the interview always keeps moving forward on any real answer. Null ONLY when messageType is 'informal' (no real answer was given yet, so don't advance)."
     ),
   newTargetMentioned: z
     .string()
     .nullable()
     .describe(
-      "Set this ONLY if the candidate's latest message expresses interest in practicing for a DIFFERENT company and/or role than the one this conversation is locked to — name it briefly, e.g. 'Data Analyst at Swiggy'. Null in the normal case where they're still talking about the current company/role."
+      "Set this ONLY if the candidate's latest message expresses interest in practicing for a DIFFERENT company and/or role than the one this conversation is locked to. Null in the normal case."
     ),
   languageChangeRequested: z
     .enum(["English", "Hindi", "Hinglish"])
     .nullable()
     .describe(
-      "Set this ONLY if the candidate explicitly asks to change the language their answer-feedback is given in (e.g. 'give feedback in Hindi', 'switch to Hinglish', 'English please'). Null in the normal case."
+      "Set this ONLY if the candidate explicitly asks to change the language their answer-feedback is given in. Null in the normal case."
+    ),
+  roundComplete: z
+    .boolean()
+    .describe(
+      "True if the CURRENT round (see the rounds list in the system prompt) has now been fully and naturally covered by this exchange, so it's time to wrap up this round and move to the next one (or finish the interview if this was the last round). Only ever true on a 'formal' or 'mixed' message, never on 'informal'. False in the normal case."
     ),
   interviewComplete: z
     .boolean()
     .describe(
-      "True if this interview has now reached a natural close — either you (as interviewer) are wrapping up after covering a reasonably full arc (rapport, behavioral, role-specific/technical, and a closing question), or the candidate explicitly asked to end/stop the interview. When true, 'nextQuestion' should instead be a warm closing line (e.g. thanking them, saying you'll be in touch) rather than another question. False in the normal case, while the interview is still ongoing."
-    ),
-  planStepsDone: z
-    .number()
-    .int()
-    .min(0)
-    .describe(
-      "How many stages of the interview plan checklist (shown in the system prompt, if any) are now fully finished, counting from the first. 0 if none yet. Never decreases turn to turn."
+      "True if this was the LAST round and it has now reached a natural close, or the candidate explicitly asked to end/stop the interview. When true, 'nextQuestion' should instead be a warm closing line rather than another question."
     ),
 });
 
@@ -58,7 +70,7 @@ export type InterviewReply = z.infer<typeof interviewReplySchema>;
 export function formatInterviewReply(
   reply: InterviewReply,
   context: { company: string; role: string }
-): string {
+): { text: string; isFluentaVoice: boolean } {
   const parts: string[] = [];
 
   if (reply.languageChangeRequested) {
@@ -73,21 +85,29 @@ export function formatInterviewReply(
     );
   }
 
-  parts.push(reply.reaction.trim());
+  if (reply.messageType === "informal") {
+    parts.push((reply.fluentaReply ?? "").trim());
+    return { text: parts.join("\n\n"), isFluentaVoice: true };
+  }
+
+  if (reply.messageType === "mixed" && reply.fluentaReply) {
+    parts.push(`{{system-note}}${reply.fluentaReply.trim()}{{/system-note}}`);
+  }
+
+  parts.push((reply.interviewerReaction ?? "").trim());
 
   const correctionMarkers = reply.corrections
     .map((c) => `[[wrong: ${c.wrong}||fix: ${c.fix}||why: ${c.why}]]`)
     .join(" ");
   const feedbackBlockInner = correctionMarkers
-    ? `${reply.answerFeedback.trim()}\n${correctionMarkers}`
-    : reply.answerFeedback.trim();
-  parts.push(`{{feedback-block}}${feedbackBlockInner}{{/feedback-block}}`);
+    ? `${(reply.answerFeedback ?? "").trim()}\n${correctionMarkers}`
+    : (reply.answerFeedback ?? "").trim();
+  if (feedbackBlockInner) {
+    parts.push(`{{feedback-block}}${feedbackBlockInner}{{/feedback-block}}`);
+  }
 
-  parts.push(
-    reply.interviewComplete
-      ? reply.nextQuestion.trim()
-      : `**${reply.nextQuestion.trim()}**`
-  );
+  const question = (reply.nextQuestion ?? "").trim();
+  parts.push(reply.interviewComplete ? question : `**${question}**`);
 
-  return parts.join("\n\n");
+  return { text: parts.join("\n\n"), isFluentaVoice: false };
 }

@@ -4,11 +4,12 @@ import { generateObject, type ModelMessage } from "ai";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { chatModel } from "@/lib/ai";
-import { buildInterviewSystemPrompt } from "@/lib/interviewPrompt";
+import { buildInterviewSystemPrompt, type InterviewRound } from "@/lib/interviewPrompt";
 import { researchCompanyRole } from "@/lib/research";
-import { onboardingSchema, ONBOARDING_SYSTEM_PROMPT } from "@/lib/interviewOnboarding";
+import { onboardingSchema, buildOnboardingSystemPrompt } from "@/lib/interviewOnboarding";
 import { interviewReplySchema, formatInterviewReply } from "@/lib/interviewReply";
 import { kickoffSchema } from "@/lib/interviewKickoff";
+import { confirmIntentSchema, buildConfirmIntentSystemPrompt } from "@/lib/interviewConfirm";
 import { summarizeConversation } from "@/lib/summarize";
 import { generateInterviewReport } from "@/lib/interviewReport";
 import { generateLesson } from "@/lib/lessons";
@@ -25,6 +26,45 @@ const chatRequestSchema = z.object({
   conversationId: z.string().min(1),
   message: z.string().min(1).max(4000),
 });
+
+function asRounds(value: unknown): InterviewRound[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (r): r is InterviewRound =>
+      typeof r === "object" && r !== null && "name" in r && "type" in r
+  );
+}
+
+async function runKickoff({
+  company,
+  role,
+  research,
+  contextSummary,
+  interviewerName,
+  extraInstruction,
+}: {
+  company: string;
+  role: string;
+  research: string | null;
+  contextSummary?: string | null;
+  interviewerName?: string | null;
+  extraInstruction: string;
+}) {
+  const kickoffSystemPrompt = buildInterviewSystemPrompt({
+    company,
+    role,
+    research,
+    contextSummary,
+    interviewerName,
+  });
+  const { object } = await generateObject({
+    model: chatModel,
+    system: kickoffSystemPrompt,
+    prompt: extraInstruction,
+    schema: kickoffSchema,
+  });
+  return object;
+}
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -60,10 +100,15 @@ export async function POST(request: Request) {
     data: { conversationId, role: "user", content: message },
   });
 
+  const preferredLanguage = user?.preferredLanguage ?? "English";
+
   // Onboarding: no target set yet, so this message should be establishing one.
-  // "completed" is handled separately below — that's a finished interview
-  // awaiting a restart decision, not a conversation still being set up.
-  if (conversation.status !== "ready" && conversation.status !== "completed") {
+  // "confirming" and "completed" are handled separately below.
+  if (
+    conversation.status !== "ready" &&
+    conversation.status !== "completed" &&
+    conversation.status !== "confirming"
+  ) {
     const onboardingHistory = await prisma.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: "asc" },
@@ -78,7 +123,7 @@ export async function POST(request: Request) {
     try {
       const result = await generateObject({
         model: chatModel,
-        system: ONBOARDING_SYSTEM_PROMPT,
+        system: buildOnboardingSystemPrompt(preferredLanguage),
         messages: onboardingMessages,
         schema: onboardingSchema,
       });
@@ -129,38 +174,110 @@ export async function POST(request: Request) {
 
     await prisma.conversation.update({
       where: { id: conversationId },
-      data: { research, status: "ready" },
-    });
-
-    const kickoffSystemPrompt = buildInterviewSystemPrompt({
-      company,
-      role,
-      research,
+      data: { research, status: "confirming" },
     });
 
     try {
-      const { object: kickoff } = await generateObject({
+      const { object: confirmAsk } = await generateObject({
         model: chatModel,
-        system: kickoffSystemPrompt,
+        system: buildConfirmIntentSystemPrompt({ company, role, preferredLanguage }),
         prompt:
-          "The candidate has just confirmed the role and company. Pick your interviewer name, write your opening greeting, and write the short interview plan.",
-        schema: kickoffSchema,
+          "The research above was just completed and shared with the candidate. Ask if they're ready to begin the mock interview.",
+        schema: confirmIntentSchema,
+      });
+
+      const created = await prisma.message.create({
+        data: { conversationId, role: "assistant", content: confirmAsk.reply, isOnboarding: true },
+      });
+
+      return NextResponse.json({
+        reply: confirmAsk.reply,
+        profileReady: true,
+        messageId: created.id,
+      });
+    } catch (error) {
+      console.error("Confirm-ask failed:", error);
+      return NextResponse.json(
+        { error: "The AI coach is unavailable right now. Please try again." },
+        { status: 502 }
+      );
+    }
+  }
+
+  // Research is done, waiting for the candidate to say they're ready to start.
+  if (conversation.status === "confirming") {
+    const recentHistory = await prisma.message.findMany({
+      where: { conversationId },
+      orderBy: { createdAt: "asc" },
+      take: -12,
+    });
+    const recentMessages: ModelMessage[] = recentHistory.map((m) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+    }));
+
+    let intent;
+    try {
+      const result = await generateObject({
+        model: chatModel,
+        system: buildConfirmIntentSystemPrompt({
+          company: conversation.company!,
+          role: conversation.role!,
+          preferredLanguage,
+        }),
+        messages: recentMessages,
+        schema: confirmIntentSchema,
+      });
+      intent = result.object;
+    } catch (error) {
+      console.error("Confirm-intent check failed:", error);
+      return NextResponse.json(
+        { error: "The AI coach is unavailable right now. Please try again." },
+        { status: 502 }
+      );
+    }
+
+    if (intent.wantsToStart !== true) {
+      const created = await prisma.message.create({
+        data: { conversationId, role: "assistant", content: intent.reply, isOnboarding: true },
+      });
+      return NextResponse.json({ reply: intent.reply, profileReady: true, messageId: created.id });
+    }
+
+    try {
+      const kickoff = await runKickoff({
+        company: conversation.company!,
+        role: conversation.role!,
+        research: conversation.research,
+        interviewerName: conversation.interviewerName,
+        extraInstruction:
+          "The candidate just confirmed they're ready to begin. Pick your interviewer name, design the rounds, estimate total turns, write your Fluenta intro message explaining the structure, and write the interviewer's opening greeting.",
       });
 
       await prisma.conversation.update({
         where: { id: conversationId },
-        data: { interviewerName: kickoff.interviewerName, plan: kickoff.plan },
+        data: {
+          status: "ready",
+          interviewerName: kickoff.interviewerName,
+          rounds: kickoff.rounds,
+          roundsDone: 0,
+          estimatedTurns: kickoff.estimatedTurns,
+          interviewTurnsDone: 0,
+        },
       });
 
+      await prisma.message.create({
+        data: { conversationId, role: "assistant", content: kickoff.introMessage, isOnboarding: true },
+      });
       const created = await prisma.message.create({
-        data: { conversationId, role: "assistant", content: kickoff.greeting },
+        data: { conversationId, role: "assistant", content: kickoff.interviewerGreeting },
       });
 
       return NextResponse.json({
-        reply: kickoff.greeting,
+        reply: kickoff.interviewerGreeting,
         profileReady: true,
         messageId: created.id,
-        planReady: kickoff.plan.length > 0,
+        interviewStarted: true,
       });
     } catch (error) {
       console.error("Kickoff generation failed:", error);
@@ -208,23 +325,15 @@ export async function POST(request: Request) {
     }
 
     if (intent.wantsToRestart === true) {
-      const company = conversation.company!;
-      const role = conversation.role!;
-      const kickoffSystemPrompt = buildInterviewSystemPrompt({
-        company,
-        role,
-        research: conversation.research,
-        contextSummary: conversation.contextSummary,
-        interviewerName: conversation.interviewerName,
-      });
-
       try {
-        const { object: kickoff } = await generateObject({
-          model: chatModel,
-          system: kickoffSystemPrompt,
-          prompt:
-            "The candidate wants to practice this same interview again from the start. Pick your interviewer name (reuse the existing one given above if there is one), write a fresh opening greeting that briefly acknowledges this is a new attempt, and write a new short interview plan.",
-          schema: kickoffSchema,
+        const kickoff = await runKickoff({
+          company: conversation.company!,
+          role: conversation.role!,
+          research: conversation.research,
+          contextSummary: conversation.contextSummary,
+          interviewerName: conversation.interviewerName,
+          extraInstruction:
+            "The candidate wants to practice this same interview again from the start. Pick your interviewer name (reuse the existing one given above if there is one), design fresh rounds, estimate total turns, write a Fluenta intro message that briefly acknowledges this is a new attempt while explaining the structure, and write the interviewer's opening greeting.",
         });
 
         await prisma.conversation.update({
@@ -233,21 +342,26 @@ export async function POST(request: Request) {
             status: "ready",
             completedAt: null,
             interviewerName: kickoff.interviewerName,
-            plan: kickoff.plan,
-            planStepsDone: 0,
+            rounds: kickoff.rounds,
+            roundsDone: 0,
+            estimatedTurns: kickoff.estimatedTurns,
+            interviewTurnsDone: 0,
           },
         });
 
+        await prisma.message.create({
+          data: { conversationId, role: "assistant", content: kickoff.introMessage, isOnboarding: true },
+        });
         const created = await prisma.message.create({
-          data: { conversationId, role: "assistant", content: kickoff.greeting },
+          data: { conversationId, role: "assistant", content: kickoff.interviewerGreeting },
         });
 
         return NextResponse.json({
-          reply: kickoff.greeting,
+          reply: kickoff.interviewerGreeting,
           profileReady: true,
           messageId: created.id,
           interviewComplete: false,
-          planStepsDone: 0,
+          interviewStarted: true,
         });
       } catch (error) {
         console.error("Restart kickoff failed:", error);
@@ -259,7 +373,7 @@ export async function POST(request: Request) {
     }
 
     const created = await prisma.message.create({
-      data: { conversationId, role: "assistant", content: intent.reply },
+      data: { conversationId, role: "assistant", content: intent.reply, isOnboarding: true },
     });
 
     return NextResponse.json({
@@ -335,17 +449,19 @@ export async function POST(request: Request) {
     [conversation.resumeText, attachmentsText].filter(Boolean).join("\n\n---\n\n") ||
     null;
 
+  const rounds = asRounds(conversation.rounds);
+
   const systemPrompt = buildInterviewSystemPrompt({
     company: conversation.company!,
     role: conversation.role!,
-    jobDescription: conversation.jobDescription,
     research: conversation.research,
     resumeText: combinedResumeText,
     structuredReply: true,
-    preferredLanguage: user?.preferredLanguage,
+    preferredLanguage,
     interviewerName: conversation.interviewerName,
     contextSummary,
-    plan: conversation.plan,
+    rounds,
+    currentRoundIndex: conversation.roundsDone,
   });
 
   try {
@@ -356,7 +472,7 @@ export async function POST(request: Request) {
       schema: interviewReplySchema,
     });
 
-    const replyText = formatInterviewReply(object, {
+    const { text: replyText, isFluentaVoice } = formatInterviewReply(object, {
       company: conversation.company!,
       role: conversation.role!,
     });
@@ -372,19 +488,24 @@ export async function POST(request: Request) {
     }
 
     const created = await prisma.message.create({
-      data: { conversationId, role: "assistant", content: replyText },
+      data: {
+        conversationId,
+        role: "assistant",
+        content: replyText,
+        isOnboarding: isFluentaVoice,
+      },
     });
 
-    const planStepsDone = Math.max(
-      conversation.planStepsDone,
-      Math.min(object.planStepsDone, conversation.plan.length)
-    );
-    if (planStepsDone !== conversation.planStepsDone) {
-      await prisma.conversation.update({
-        where: { id: conversationId },
-        data: { planStepsDone },
-      });
-    }
+    // Every message advances progress, regardless of round/checklist state.
+    const interviewTurnsDone = conversation.interviewTurnsDone + 1;
+    const roundsDone = object.roundComplete
+      ? Math.min(conversation.roundsDone + 1, Math.max(rounds.length - 1, 0))
+      : conversation.roundsDone;
+
+    await prisma.conversation.update({
+      where: { id: conversationId },
+      data: { interviewTurnsDone, roundsDone },
+    });
 
     let interviewJustCompleted = false;
     if (object.interviewComplete && !conversation.completedAt) {
@@ -449,7 +570,9 @@ export async function POST(request: Request) {
       messageId: created.id,
       summarizedUpToCount,
       interviewComplete: interviewJustCompleted,
-      planStepsDone,
+      interviewTurnsDone,
+      estimatedTurns: conversation.estimatedTurns,
+      currentRoundType: rounds[Math.min(roundsDone, rounds.length - 1)]?.type ?? null,
     });
   } catch (error) {
     console.error("Chat completion failed:", error);

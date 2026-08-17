@@ -8,13 +8,11 @@ import {
   ClipboardCheck,
   FileText,
   GraduationCap,
-  ListChecks,
   PanelRight,
 } from "lucide-react";
 
 const ICONS = {
   research: FileText,
-  plan: ListChecks,
   report: ClipboardCheck,
   lesson: GraduationCap,
 } as const;

@@ -3,13 +3,10 @@ import { researchModel } from "@/lib/ai";
 
 export async function researchCompanyRole(
   company: string,
-  role: string,
-  jobDescription?: string
+  role: string
 ): Promise<string> {
   const prompt = `
 You are writing a briefing for a first-time job candidate who has never worked in a professional environment before and knows nothing about "${company}" or the "${role}" role. Research them thoroughly and write a briefing that makes this stranger feel genuinely prepared and confident, not just informed.
-
-${jobDescription ? `The candidate has also provided this job description for context:\n${jobDescription}\n` : ""}
 
 Write in plain, warm, encouraging English — like a mentor explaining things to a friend, not a corporate report. Every piece of jargon must be explained in plain words the first time it appears. Use concrete, relatable examples rather than abstract descriptions. Structure it with these "## " headers, in this order:
 

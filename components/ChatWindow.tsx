@@ -8,6 +8,7 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { StatusIndicator } from "@/components/StatusIndicator";
 import { EmptyState } from "@/components/EmptyState";
 import { ResumeUploadButton } from "@/components/ResumeUploadButton";
+import { CodeEditor } from "@/components/CodeEditor";
 
 type ChatMessage = {
   id: string;
@@ -26,7 +27,9 @@ export function ChatWindow({
   isReady,
   interviewerName,
   initialSummarizedUpToCount = 0,
-  initialPlanStepsDone = 0,
+  initialInterviewTurnsDone = 0,
+  initialEstimatedTurns = 0,
+  initialCurrentRoundType = null,
 }: {
   conversationId: string;
   greeting: string;
@@ -34,7 +37,9 @@ export function ChatWindow({
   isReady: boolean;
   interviewerName?: string | null;
   initialSummarizedUpToCount?: number;
-  initialPlanStepsDone?: number;
+  initialInterviewTurnsDone?: number;
+  initialEstimatedTurns?: number;
+  initialCurrentRoundType?: string | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [profileReady, setProfileReady] = useState(isReady);
@@ -48,11 +53,15 @@ export function ChatWindow({
   const [summarizedUpToCount, setSummarizedUpToCount] = useState(
     initialSummarizedUpToCount
   );
-  const [planStepsDone, setPlanStepsDone] = useState(initialPlanStepsDone);
+  const [interviewTurnsDone, setInterviewTurnsDone] = useState(initialInterviewTurnsDone);
+  const [estimatedTurns, setEstimatedTurns] = useState(initialEstimatedTurns);
+  const [currentRoundType, setCurrentRoundType] = useState(initialCurrentRoundType);
   const [willSummarize, setWillSummarize] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+
+  const showCodeEditor = Boolean(currentRoundType?.toLowerCase().includes("cod"));
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -95,15 +104,20 @@ export function ChatWindow({
         setSummarizedUpToCount(data.summarizedUpToCount);
       }
 
+      if (typeof data.interviewTurnsDone === "number") {
+        setInterviewTurnsDone(data.interviewTurnsDone);
+      }
+      if (typeof data.estimatedTurns === "number") {
+        setEstimatedTurns(data.estimatedTurns);
+      }
       if (
-        typeof data.planStepsDone === "number" &&
-        data.planStepsDone !== planStepsDone
+        (typeof data.currentRoundType === "string" || data.currentRoundType === null) &&
+        data.currentRoundType !== currentRoundType
       ) {
-        setPlanStepsDone(data.planStepsDone);
-        router.refresh();
+        setCurrentRoundType(data.currentRoundType);
       }
 
-      if (data.interviewComplete) {
+      if (data.interviewComplete || data.interviewStarted) {
         router.refresh();
       }
 
@@ -129,11 +143,8 @@ export function ChatWindow({
     }
   }
 
-  async function handleSend() {
-    const text = input.trim();
+  async function handleSendText(text: string) {
     if (!text || sending) return;
-
-    setInput("");
     setMessages((prev) => [
       ...prev,
       {
@@ -144,6 +155,13 @@ export function ChatWindow({
       },
     ]);
     await sendMessage(text);
+  }
+
+  async function handleSend() {
+    const text = input.trim();
+    if (!text || sending) return;
+    setInput("");
+    await handleSendText(text);
   }
 
   async function handleResend() {
@@ -225,8 +243,11 @@ export function ChatWindow({
           </div>
         </div>
       ) : (
-        <div className="sticky bottom-0 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-md [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="mx-auto flex w-full max-w-5xl items-end gap-2">
+        <div className="sticky bottom-0 border-t border-border bg-background/95 pt-3 backdrop-blur-md [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]">
+          {showCodeEditor && (
+            <CodeEditor onSubmit={handleSendText} disabled={sending} />
+          )}
+          <div className="mx-auto flex w-full max-w-5xl items-end gap-2 px-4">
             <ResumeUploadButton
               conversationId={conversationId}
               disabled={uploadingFile}

@@ -67,11 +67,12 @@ model Conversation {
   company        String?
   role           String?
   interviewerName String?
-  jobDescription String?
   resumeText     String?
   research       String?
-  plan           String[]  @default([])
-  planStepsDone  Int       @default(0)
+  rounds         Json      @default("[]")
+  roundsDone     Int       @default(0)
+  estimatedTurns Int       @default(0)
+  interviewTurnsDone Int   @default(0)
   contextSummary String?
   summarizedUpToCount Int  @default(0)
   status         String    @default("pending")
