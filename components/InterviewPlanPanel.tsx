@@ -8,18 +8,26 @@ import { cn } from "@/lib/utils";
 export function InterviewPlanPanel({
   steps,
   stepsDone,
+  variant = "bar",
 }: {
   steps: string[];
   stepsDone: number;
+  variant?: "bar" | "inline";
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(variant === "inline");
+  const inline = variant === "inline";
 
   return (
-    <div className="border-b border-border">
+    <div className={cn(!inline && "border-b border-border")}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="mx-auto flex w-full max-w-5xl items-center gap-2 px-4 py-2.5 text-sm text-muted transition-colors hover:text-foreground"
+        className={cn(
+          "flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground",
+          inline
+            ? "w-full px-3 py-2.5"
+            : "mx-auto w-full max-w-5xl px-4 py-2.5"
+        )}
       >
         <ListChecks size={14} />
         Interview plan
@@ -43,8 +51,13 @@ export function InterviewPlanPanel({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mx-auto max-w-5xl px-4 pb-5">
-              <div className="rounded-xl border border-border bg-surface p-5">
+            <div className={inline ? "px-3 pb-3" : "mx-auto max-w-5xl px-4 pb-5"}>
+              <div
+                className={cn(
+                  "rounded-xl border border-border",
+                  inline ? "bg-background p-3" : "bg-surface p-5"
+                )}
+              >
                 <div className="flex flex-col gap-2.5">
                   {steps.map((step, i) => {
                     const done = i < stepsDone;

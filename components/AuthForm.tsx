@@ -46,6 +46,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   }
 
   async function afterSignIn(welcomeMessage: string, startNewChat = false) {
+    // router.refresh() is required here, not optional — Navbar (and the
+    // "Admin" link) lives in the root layout, a segment shared with the
+    // pre-login page. router.push() alone reuses that shared segment's
+    // already-rendered (logged-out) RSC payload instead of re-fetching it,
+    // so without refresh() the navbar silently stays stale after login.
     if (startNewChat) {
       try {
         const res = await fetch("/api/conversations", { method: "POST" });
@@ -53,6 +58,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         if (res.ok) {
           toast.success(welcomeMessage);
           router.push(`/chat/${data.id}`);
+          router.refresh();
           return;
         }
       } catch {
@@ -63,6 +69,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     toast.success(welcomeMessage);
     const callbackUrl = searchParams.get("callbackUrl");
     router.push(callbackUrl || "/chat");
+    router.refresh();
   }
 
   // ---------- Signup ----------

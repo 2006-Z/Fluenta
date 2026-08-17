@@ -5,11 +5,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildInterviewGreeting } from "@/lib/interviewPrompt";
 import { ChatWindow } from "@/components/ChatWindow";
-import { ResearchPanel } from "@/components/ResearchPanel";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
-import { InterviewPlanPanel } from "@/components/InterviewPlanPanel";
-import { InterviewReportPanel } from "@/components/InterviewReportPanel";
-import { LessonPanel } from "@/components/LessonPanel";
+import { InsightsMenu } from "@/components/InsightsMenu";
 
 const ONBOARDING_GREETING =
   "Hi! I'm your AI interview coach. Tell me the company and role you're preparing for — for example, \"Verification Analyst at InstaVeritas\" — and I'll research it and get started.";
@@ -47,9 +44,15 @@ export default async function ChatConversationPage({
       ? `${conversation.role} at ${conversation.company}`
       : conversation.title ?? "New interview";
 
+  const planTotal = conversation.plan.length;
+  const planProgress =
+    planTotal > 0
+      ? Math.min(conversation.planStepsDone, planTotal) / planTotal
+      : 0;
+
   return (
     <div className="flex h-[calc(100dvh-2.75rem)] flex-col">
-      <div className="border-b border-border px-4 py-2">
+      <div className="border-b border-border px-4 py-3">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3">
           <Link
             href="/chat"
@@ -58,41 +61,35 @@ export default async function ChatConversationPage({
           >
             <ArrowLeft size={16} />
           </Link>
-          <div className="flex flex-1 items-center gap-2">
-            {isReady ? (
-              <Briefcase size={16} className="text-accent" />
-            ) : (
-              <Sparkles size={16} className="text-accent" />
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              {isReady ? (
+                <Briefcase size={16} className="text-accent" />
+              ) : (
+                <Sparkles size={16} className="text-accent" />
+              )}
+              <h1 className="text-sm font-semibold text-foreground">{title}</h1>
+            </div>
+            {isReady && planTotal > 0 && (
+              <div className="h-[3px] w-full overflow-hidden rounded-full bg-border">
+                <div
+                  className="h-full rounded-full bg-success transition-all duration-500"
+                  style={{ width: `${planProgress * 100}%` }}
+                />
+              </div>
             )}
-            <h1 className="text-sm font-semibold text-foreground">{title}</h1>
           </div>
+          <InsightsMenu
+            research={isReady ? conversation.research : null}
+            subscribed={session.user.subscribed}
+            plan={isReady ? conversation.plan : undefined}
+            planStepsDone={conversation.planStepsDone}
+            report={conversation.report}
+            reportVerdict={conversation.reportVerdict}
+            lesson={conversation.lessons[0] ?? null}
+          />
         </div>
       </div>
-      {isReady && conversation.research && (
-        <ResearchPanel
-          research={conversation.research}
-          subscribed={session.user.subscribed}
-        />
-      )}
-      {isReady && conversation.plan.length > 0 && (
-        <InterviewPlanPanel
-          steps={conversation.plan}
-          stepsDone={conversation.planStepsDone}
-        />
-      )}
-      {conversation.report && (
-        <InterviewReportPanel
-          report={conversation.report}
-          verdict={conversation.reportVerdict}
-        />
-      )}
-      {conversation.lessons[0] && (
-        <LessonPanel
-          format={conversation.lessons[0].format}
-          title={conversation.lessons[0].title}
-          content={conversation.lessons[0].content}
-        />
-      )}
       <AttachmentsPanel attachments={conversation.attachments} />
       <ChatWindow
         conversationId={conversation.id}

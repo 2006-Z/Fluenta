@@ -4,23 +4,32 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ClipboardCheck, ChevronDown } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
+import { cn } from "@/lib/utils";
 
 export function InterviewReportPanel({
   report,
   verdict,
+  variant = "bar",
 }: {
   report: string;
   verdict: string | null;
+  variant?: "bar" | "inline";
 }) {
   const [open, setOpen] = useState(true);
   const isStrong = verdict === "strong";
+  const inline = variant === "inline";
 
   return (
-    <div className="border-b border-border">
+    <div className={cn(!inline && "border-b border-border")}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="mx-auto flex w-full max-w-5xl items-center gap-2 px-4 py-2.5 text-sm text-muted transition-colors hover:text-foreground"
+        className={cn(
+          "flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground",
+          inline
+            ? "w-full px-3 py-2.5"
+            : "mx-auto w-full max-w-5xl px-4 py-2.5"
+        )}
       >
         <ClipboardCheck size={14} />
         Interview report
@@ -52,8 +61,13 @@ export function InterviewReportPanel({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mx-auto max-w-5xl px-4 pb-5">
-              <div className="rounded-xl border border-border bg-surface p-5">
+            <div className={inline ? "px-3 pb-3" : "mx-auto max-w-5xl px-4 pb-5"}>
+              <div
+                className={cn(
+                  "rounded-xl border border-border",
+                  inline ? "bg-background p-3" : "bg-surface p-5"
+                )}
+              >
                 <Markdown content={report} />
               </div>
             </div>

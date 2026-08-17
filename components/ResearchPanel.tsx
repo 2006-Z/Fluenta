@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FileText, ChevronDown, Lock } from "lucide-react";
 import { parseResearch, type ResearchSection } from "@/lib/parseResearch";
 import { Markdown } from "@/components/Markdown";
+import { cn } from "@/lib/utils";
 
 const FREE_CHAR_LIMIT = 450;
 
@@ -39,22 +40,30 @@ function truncateSections(sections: ResearchSection[], limit: number) {
 export function ResearchPanel({
   research,
   subscribed,
+  variant = "bar",
 }: {
   research: string;
   subscribed: boolean;
+  variant?: "bar" | "inline";
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(variant === "inline");
   const sections = parseResearch(research);
   const { visible: visibleSections, truncated: isTruncated } = subscribed
     ? { visible: sections, truncated: false }
     : truncateSections(sections, FREE_CHAR_LIMIT);
+  const inline = variant === "inline";
 
   return (
-    <div className="border-b border-border">
+    <div className={cn(!inline && "border-b border-border")}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="mx-auto flex w-full max-w-5xl items-center gap-2 px-4 py-2.5 text-sm text-muted transition-colors hover:text-foreground"
+        className={cn(
+          "flex items-center gap-2 text-sm text-muted transition-colors hover:text-foreground",
+          inline
+            ? "w-full px-3 py-2.5"
+            : "mx-auto w-full max-w-5xl px-4 py-2.5"
+        )}
       >
         <FileText size={14} />
         Company research
@@ -75,8 +84,13 @@ export function ResearchPanel({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="mx-auto max-w-5xl px-4 pb-5">
-              <div className="rounded-xl border border-border bg-surface p-5">
+            <div className={inline ? "px-3 pb-3" : "mx-auto max-w-5xl px-4 pb-5"}>
+              <div
+                className={cn(
+                  "rounded-xl border border-border",
+                  inline ? "bg-background p-3" : "bg-surface p-5"
+                )}
+              >
                 <div className="flex flex-col gap-4">
                   {visibleSections.map((section, i) => (
                     <div key={i}>
