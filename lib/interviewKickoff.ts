@@ -12,9 +12,11 @@ export const kickoffSchema = z.object({
       "Your opening message to the candidate: warmly greet them, briefly introduce yourself (using the interviewerName above) and your team's context, confirm you'll be interviewing them for this role today, then ease in with a simple rapport-building opener (e.g. asking them to introduce themselves and what drew them to this role) rather than a hard question first."
     ),
   plan: z
-    .string()
+    .array(z.string())
+    .min(3)
+    .max(6)
     .describe(
-      "A short interview plan for the candidate, written directly to them, in plain markdown with 3-5 short bullet points ('- ' bullets, under 15 words each) naming the stages this interview will move through in order (e.g. rapport-building intro, behavioral questions, role-specific/technical questions, closing), tailored to this specific company/role using the research above."
+      "3-6 short stage labels (under 8 words each, no numbering, plain text — e.g. 'Rapport-building intro', 'Behavioral questions', 'Role-specific technical questions', 'Closing') naming the stages this interview will move through, in order, tailored to this specific company/role using the research above. The candidate will see these as a progress checklist that fills in as the interview moves through each stage."
     ),
 });
 

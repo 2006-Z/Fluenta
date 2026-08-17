@@ -115,6 +115,19 @@ export const ADMIN_MODELS: Record<string, ModelDef> = {
       { name: "createdAt", type: "readonly" },
     ],
   },
+  lesson: {
+    key: "lesson",
+    label: "Lessons",
+    orderBy: { field: "createdAt", direction: "desc" },
+    fields: [
+      { name: "id", type: "readonly" },
+      { name: "conversationId", type: "text" },
+      { name: "format", type: "text" },
+      { name: "title", type: "text" },
+      { name: "content", type: "textarea" },
+      { name: "createdAt", type: "readonly" },
+    ],
+  },
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -127,6 +140,7 @@ export function getDelegate(modelKey: string): any {
     otpCode: prisma.otpCode,
     passwordResetToken: prisma.passwordResetToken,
     pendingSignup: prisma.pendingSignup,
+    lesson: prisma.lesson,
   };
   return delegates[modelKey];
 }

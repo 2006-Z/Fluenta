@@ -10,6 +10,7 @@ import {
   RotateCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Markdown } from "@/components/Markdown";
 
 type Flashcards = { cards: { front: string; back: string }[] };
 type BeforeAfter = { items: { before: string; after: string; why: string }[] };
@@ -51,7 +52,7 @@ function Flashcard({ front, back }: { front: string; back: string }) {
         <RotateCw size={11} />
         {flipped ? "Answer" : "Prompt"}
       </span>
-      <p className="text-sm text-foreground">{flipped ? back : front}</p>
+      <Markdown content={flipped ? back : front} className="text-foreground" />
     </button>
   );
 }
@@ -93,7 +94,7 @@ function QuizQuestion({
         })}
       </div>
       {selected !== null && (
-        <p className="mt-3 text-xs text-muted">{explanation}</p>
+        <Markdown content={explanation} className="mt-3 text-xs" />
       )}
     </div>
   );
@@ -121,7 +122,7 @@ function renderLessonBody(format: string, content: unknown) {
                 {item.before}
               </p>
               <p className="mt-2 text-sm font-medium text-success">{item.after}</p>
-              <p className="mt-2 text-xs text-muted">{item.why}</p>
+              <Markdown content={item.why} className="mt-2 text-xs" />
             </div>
           ))}
         </div>
@@ -147,14 +148,14 @@ function renderLessonBody(format: string, content: unknown) {
       ];
       return (
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-muted">{data.explanation}</p>
+          <Markdown content={data.explanation} />
           <div className="flex flex-col gap-2">
             {rows.map(([label, text]) => (
               <div key={label} className="rounded-xl border border-border bg-background p-4">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-accent">
                   {label}
                 </span>
-                <p className="mt-1 text-sm text-foreground">{text}</p>
+                <Markdown content={text} className="mt-1 text-foreground" />
               </div>
             ))}
           </div>
@@ -168,7 +169,7 @@ function renderLessonBody(format: string, content: unknown) {
           {data.terms.map((t, i) => (
             <div key={i} className="rounded-xl border border-border bg-background p-4">
               <p className="text-sm font-semibold text-foreground">{t.term}</p>
-              <p className="mt-1 text-sm text-muted">{t.meaning}</p>
+              <Markdown content={t.meaning} className="mt-1" />
               <p className="mt-1 text-xs italic text-muted">&ldquo;{t.example}&rdquo;</p>
             </div>
           ))}
@@ -187,7 +188,8 @@ function renderLessonBody(format: string, content: unknown) {
                   <li key={j}>{ex}</li>
                 ))}
               </ul>
-              <p className="mt-2 text-sm text-success">Fix: {p.fix}</p>
+              <p className="mt-2 text-sm font-medium text-success">Fix</p>
+              <Markdown content={p.fix} />
             </div>
           ))}
         </div>
@@ -204,7 +206,7 @@ function renderLessonBody(format: string, content: unknown) {
           {data.sections.map((s, i) => (
             <div key={i}>
               <h3 className="mb-1 text-sm font-semibold text-foreground">{s.heading}</h3>
-              <p className="text-sm leading-relaxed text-muted">{s.body}</p>
+              <Markdown content={s.body} />
             </div>
           ))}
         </div>
@@ -217,16 +219,14 @@ function renderLessonBody(format: string, content: unknown) {
           {data.items.map((item, i) => (
             <div key={i} className="rounded-xl border border-border bg-background p-4">
               <p className="text-sm font-medium text-foreground">{item.question}</p>
-              <p className="mt-2 text-sm text-muted">
-                <span className="text-[11px] font-medium uppercase text-muted">You said: </span>
-                {item.yourAnswer}
-              </p>
-              <p className="mt-2 text-sm text-success">
-                <span className="text-[11px] font-medium uppercase text-success">
-                  Stronger:{" "}
-                </span>
-                {item.strongerAnswer}
-              </p>
+              <span className="mt-2 block text-[11px] font-medium uppercase text-muted">
+                You said
+              </span>
+              <Markdown content={item.yourAnswer} />
+              <span className="mt-2 block text-[11px] font-medium uppercase text-success">
+                Stronger
+              </span>
+              <Markdown content={item.strongerAnswer} />
             </div>
           ))}
         </div>
@@ -239,7 +239,7 @@ function renderLessonBody(format: string, content: unknown) {
           {data.prompts.map((p, i) => (
             <div key={i} className="rounded-xl border border-border bg-background p-4">
               <p className="text-sm font-medium text-foreground">{p.prompt}</p>
-              <p className="mt-2 text-xs text-muted">{p.outline}</p>
+              <Markdown content={p.outline} className="mt-2 text-xs" />
             </div>
           ))}
         </div>

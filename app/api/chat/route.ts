@@ -157,7 +157,7 @@ export async function POST(request: Request) {
         reply: kickoff.greeting,
         profileReady: true,
         messageId: created.id,
-        planReady: Boolean(kickoff.plan),
+        planReady: kickoff.plan.length > 0,
       });
     } catch (error) {
       console.error("Kickoff generation failed:", error);
@@ -244,6 +244,7 @@ export async function POST(request: Request) {
     preferredLanguage: user?.preferredLanguage,
     interviewerName: conversation.interviewerName,
     contextSummary,
+    plan: conversation.plan,
   });
 
   try {
@@ -272,6 +273,17 @@ export async function POST(request: Request) {
     const created = await prisma.message.create({
       data: { conversationId, role: "assistant", content: replyText },
     });
+
+    const planStepsDone = Math.max(
+      conversation.planStepsDone,
+      Math.min(object.planStepsDone, conversation.plan.length)
+    );
+    if (planStepsDone !== conversation.planStepsDone) {
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { planStepsDone },
+      });
+    }
 
     let interviewJustCompleted = false;
     if (object.interviewComplete && !conversation.completedAt) {
@@ -335,6 +347,7 @@ export async function POST(request: Request) {
       messageId: created.id,
       summarizedUpToCount,
       interviewComplete: interviewJustCompleted,
+      planStepsDone,
     });
   } catch (error) {
     console.error("Chat completion failed:", error);

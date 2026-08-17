@@ -26,6 +26,7 @@ export function ChatWindow({
   isReady,
   interviewerName,
   initialSummarizedUpToCount = 0,
+  initialPlanStepsDone = 0,
 }: {
   conversationId: string;
   greeting: string;
@@ -33,6 +34,7 @@ export function ChatWindow({
   isReady: boolean;
   interviewerName?: string | null;
   initialSummarizedUpToCount?: number;
+  initialPlanStepsDone?: number;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [profileReady, setProfileReady] = useState(isReady);
@@ -46,6 +48,7 @@ export function ChatWindow({
   const [summarizedUpToCount, setSummarizedUpToCount] = useState(
     initialSummarizedUpToCount
   );
+  const [planStepsDone, setPlanStepsDone] = useState(initialPlanStepsDone);
   const [willSummarize, setWillSummarize] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -103,6 +106,14 @@ export function ChatWindow({
 
       if (typeof data.summarizedUpToCount === "number") {
         setSummarizedUpToCount(data.summarizedUpToCount);
+      }
+
+      if (
+        typeof data.planStepsDone === "number" &&
+        data.planStepsDone !== planStepsDone
+      ) {
+        setPlanStepsDone(data.planStepsDone);
+        router.refresh();
       }
 
       if (data.interviewComplete) {

@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "next-auth/react";
 import { Settings, KeyRound, LogOut, Trash2, Languages, X } from "lucide-react";
-import toast from "react-hot-toast";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { DeleteAccountForm } from "@/components/DeleteAccountForm";
 import { ChangeLanguageForm } from "@/components/ChangeLanguageForm";
@@ -77,7 +76,6 @@ export function AccountMenu({ preferredLanguage }: { preferredLanguage: string }
                 type="button"
                 onClick={() => {
                   setOpen(false);
-                  toast.success("Logged out");
                   signOut({ callbackUrl: "/" });
                 }}
                 className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-surface-hover"

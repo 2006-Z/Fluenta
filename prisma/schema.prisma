@@ -70,7 +70,8 @@ model Conversation {
   jobDescription String?
   resumeText     String?
   research       String?
-  plan           String?
+  plan           String[]  @default([])
+  planStepsDone  Int       @default(0)
   contextSummary String?
   summarizedUpToCount Int  @default(0)
   status         String    @default("pending")

@@ -44,6 +44,13 @@ export const interviewReplySchema = z.object({
     .describe(
       "True if this interview has now reached a natural close — either you (as interviewer) are wrapping up after covering a reasonably full arc (rapport, behavioral, role-specific/technical, and a closing question), or the candidate explicitly asked to end/stop the interview. When true, 'nextQuestion' should instead be a warm closing line (e.g. thanking them, saying you'll be in touch) rather than another question. False in the normal case, while the interview is still ongoing."
     ),
+  planStepsDone: z
+    .number()
+    .int()
+    .min(0)
+    .describe(
+      "How many stages of the interview plan checklist (shown in the system prompt, if any) are now fully finished, counting from the first. 0 if none yet. Never decreases turn to turn."
+    ),
 });
 
 export type InterviewReply = z.infer<typeof interviewReplySchema>;

@@ -46,15 +46,13 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   }
 
   async function afterSignIn(welcomeMessage: string, startNewChat = false) {
-    toast.success(welcomeMessage);
-
     if (startNewChat) {
       try {
         const res = await fetch("/api/conversations", { method: "POST" });
         const data = await res.json();
         if (res.ok) {
+          toast.success(welcomeMessage);
           router.push(`/chat/${data.id}`);
-          router.refresh();
           return;
         }
       } catch {
@@ -62,9 +60,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       }
     }
 
+    toast.success(welcomeMessage);
     const callbackUrl = searchParams.get("callbackUrl");
     router.push(callbackUrl || "/chat");
-    router.refresh();
   }
 
   // ---------- Signup ----------

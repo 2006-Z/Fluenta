@@ -35,6 +35,8 @@ ${report.languageNotes}
 Lesson format: "${format.label}". ${format.instructions}
 
 Ground everything in the actual interview transcript below where relevant (use their real answers/mistakes, don't invent generic content when specific examples are available).
+
+Keep every text field concise and scannable — a few short sentences at most, not a long article. This renders as markdown (so **bold**, "- " bullets, and short "## " headings inside a single field are fine when genuinely useful), but favor brevity over completeness; the candidate should be able to read the whole lesson in under a minute.
 `.trim();
 
   const { object } = await generateObject({

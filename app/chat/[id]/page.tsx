@@ -48,8 +48,8 @@ export default async function ChatConversationPage({
       : conversation.title ?? "New interview";
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem)] flex-col">
-      <div className="border-b border-border px-4 py-3">
+    <div className="flex h-[calc(100dvh-2.75rem)] flex-col">
+      <div className="border-b border-border px-4 py-2">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3">
           <Link
             href="/chat"
@@ -74,8 +74,11 @@ export default async function ChatConversationPage({
           subscribed={session.user.subscribed}
         />
       )}
-      {isReady && conversation.plan && (
-        <InterviewPlanPanel plan={conversation.plan} />
+      {isReady && conversation.plan.length > 0 && (
+        <InterviewPlanPanel
+          steps={conversation.plan}
+          stepsDone={conversation.planStepsDone}
+        />
       )}
       {conversation.report && (
         <InterviewReportPanel
@@ -97,6 +100,7 @@ export default async function ChatConversationPage({
         isReady={isReady}
         interviewerName={conversation.interviewerName}
         initialSummarizedUpToCount={conversation.summarizedUpToCount}
+        initialPlanStepsDone={conversation.planStepsDone}
         initialMessages={conversation.messages.map((m) => ({
           id: m.id,
           role: m.role === "assistant" ? "assistant" : "user",

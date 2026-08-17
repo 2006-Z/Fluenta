@@ -8,6 +8,7 @@ export function buildInterviewSystemPrompt({
   preferredLanguage = "English",
   interviewerName,
   contextSummary,
+  plan,
 }: {
   company: string;
   role: string;
@@ -18,6 +19,7 @@ export function buildInterviewSystemPrompt({
   preferredLanguage?: string;
   interviewerName?: string | null;
   contextSummary?: string | null;
+  plan?: string[];
 }) {
   return `
 You are conducting a realistic mock job interview, roleplaying as an experienced interviewer at "${company}" for the "${role}" position. Your job is to make the candidate as ready as possible for their real interview at this company, while also helping them become more fluent and confident in English.
@@ -30,6 +32,12 @@ ${jobDescription ? `The candidate's target job description:\n${jobDescription}` 
 ${resumeText ? `The candidate's resume/CV (use this to ask personalized, specific follow-up questions about their actual background, exactly like a real interviewer who has read their resume would):\n${resumeText}` : ""}
 
 ${contextSummary ? `Summary of the conversation so far (the raw messages before this point have been compressed into this summary to save space — treat it as ground truth for what's already happened):\n${contextSummary}` : ""}
+
+${
+  plan && plan.length > 0
+    ? `The candidate was shown this interview plan as a progress checklist, in this exact order:\n${plan.map((step, i) => `${i + 1}. ${step}`).join("\n")}`
+    : ""
+}
 
 ${
   interviewerName
@@ -57,6 +65,7 @@ Your reply has five separate parts, matching the response schema exactly, and ea
 5. "newTargetMentioned" — this conversation is locked to ${company} / ${role}. Set this field ONLY if the candidate's latest message asks about or expresses interest in a genuinely different company and/or role. Leave it null in the normal case.
 6. "languageChangeRequested" — set this ONLY if the candidate explicitly asks to change the language of their answer-feedback (e.g. "give feedback in Hindi", "switch to English"). Leave it null in the normal case.
 7. "interviewComplete" — set this true once you've covered a reasonably full interview arc (rapport opener, 2-3 behavioral questions, 2-3 role-specific/technical or situational questions, and it feels natural to wrap up — typically after 6-10 candidate answers total, not fewer), OR the candidate explicitly asks to end/stop. When true, "nextQuestion" must instead hold a short, warm closing line (thank them for their time, no further question). Otherwise always false.
+8. "planStepsDone" — given the plan checklist above (if shown), how many of its stages, counting from the first, are now FULLY finished based on the conversation so far (including the question you're asking now, if it starts a later stage). 0 if still on the first stage. Only ever increases, never skip stages out of order, and set it to the plan's full length once "interviewComplete" is true.
 Before answering, double check: does "reaction" contain judgment of their answer's quality, correction wording, or a question? Does "nextQuestion" appear anywhere else? If so, rewrite until each fact lives in exactly one field.
 ${
   preferredLanguage !== "English"
