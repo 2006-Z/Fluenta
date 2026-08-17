@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { ADMIN_MODELS, getDelegate } from "@/lib/adminModels";
+import { humanizeFieldName } from "@/lib/utils";
 
 const PAGE_SIZE = 25;
 
@@ -71,7 +72,7 @@ export default async function AdminModelListPage({
               <tr className="border-b border-border text-muted">
                 {columns.map((col) => (
                   <th key={col} className="whitespace-nowrap px-4 py-2 font-medium">
-                    {col}
+                    {humanizeFieldName(col)}
                   </th>
                 ))}
               </tr>

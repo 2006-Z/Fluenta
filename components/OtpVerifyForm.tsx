@@ -10,11 +10,13 @@ export function OtpVerifyForm({
   title = "Check your email",
   onSubmit,
   onResend,
+  onSwitchToPassword,
 }: {
   email: string;
   title?: string;
   onSubmit: (code: string) => Promise<{ ok: boolean; error?: string }>;
   onResend: () => Promise<{ ok: boolean; error?: string }>;
+  onSwitchToPassword?: () => void;
 }) {
   const [code, setCode] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -62,7 +64,7 @@ export function OtpVerifyForm({
       onSubmit={handleVerify}
       animate={shake ? { x: [0, -8, 8, -6, 6, 0] } : {}}
       transition={{ duration: 0.4 }}
-      className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-border bg-surface p-8 shadow-sm"
+      className="flex w-full max-w-md flex-col gap-4 rounded-2xl border border-border bg-surface p-8 shadow-sm"
     >
       <div className="mb-2 flex flex-col items-center gap-2 text-center">
         <MailCheck size={28} className="text-accent" />
@@ -103,6 +105,16 @@ export function OtpVerifyForm({
       >
         {resending ? "Sending…" : "Resend code"}
       </button>
+
+      {onSwitchToPassword && (
+        <button
+          type="button"
+          onClick={onSwitchToPassword}
+          className="text-center text-sm font-medium text-muted hover:text-foreground"
+        >
+          Log in with password instead
+        </button>
+      )}
     </motion.form>
   );
 }

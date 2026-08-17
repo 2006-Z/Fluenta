@@ -92,7 +92,7 @@ export function ChatBubble({
   const bubbleEntries = offsetSegments.filter((e) => e.segment.type !== "systemNote");
 
   return (
-    <div className={cn("flex flex-col gap-2", isUser ? "items-end" : "items-start")}>
+    <div className={cn("flex w-full flex-col gap-2", isUser ? "items-end" : "items-start")}>
       {noteEntries.map(({ segment, start }, i) => {
         if (segment.type !== "systemNote" || revealed < start) return null;
         return (
@@ -113,7 +113,7 @@ export function ChatBubble({
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className={cn("flex flex-col", isUser ? "items-end" : "items-start")}
+          className={cn("flex w-full flex-col", isUser ? "items-end" : "items-start")}
         >
           <div
             className={cn(

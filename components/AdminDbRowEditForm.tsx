@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Save, Trash2, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import type { FieldDef } from "@/lib/adminModels";
+import { humanizeFieldName } from "@/lib/utils";
 
 type RowValue = string | number | boolean | null;
 
@@ -79,7 +80,9 @@ export function AdminDbRowEditForm({
           if (field.type === "readonly") {
             return (
               <div key={field.name} className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-muted">{field.name}</span>
+                <span className="text-sm font-medium text-muted">
+                  {humanizeFieldName(field.name)}
+                </span>
                 <p className="rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-muted">
                   {value === null || value === undefined || value === ""
                     ? "—"
@@ -97,14 +100,18 @@ export function AdminDbRowEditForm({
                   onChange={(e) => setField(field.name, e.target.checked)}
                   className="h-4 w-4 rounded border-border accent-accent"
                 />
-                <span className="text-sm font-medium text-foreground">{field.name}</span>
+                <span className="text-sm font-medium text-foreground">
+                  {humanizeFieldName(field.name)}
+                </span>
               </label>
             );
           }
           if (field.type === "textarea") {
             return (
               <label key={field.name} className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-foreground">{field.name}</span>
+                <span className="text-sm font-medium text-foreground">
+                  {humanizeFieldName(field.name)}
+                </span>
                 <textarea
                   rows={4}
                   value={value === null || value === undefined ? "" : String(value)}
@@ -117,7 +124,9 @@ export function AdminDbRowEditForm({
           if (field.type === "int") {
             return (
               <label key={field.name} className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-foreground">{field.name}</span>
+                <span className="text-sm font-medium text-foreground">
+                  {humanizeFieldName(field.name)}
+                </span>
                 <input
                   type="number"
                   value={value === null || value === undefined ? "" : Number(value)}
@@ -129,7 +138,9 @@ export function AdminDbRowEditForm({
           }
           return (
             <label key={field.name} className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-foreground">{field.name}</span>
+              <span className="text-sm font-medium text-foreground">
+                {humanizeFieldName(field.name)}
+              </span>
               <input
                 type="text"
                 value={value === null || value === undefined ? "" : String(value)}

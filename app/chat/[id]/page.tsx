@@ -7,6 +7,7 @@ import { buildInterviewGreeting } from "@/lib/interviewPrompt";
 import { ChatWindow } from "@/components/ChatWindow";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { InsightsMenu } from "@/components/InsightsMenu";
+import { cn } from "@/lib/utils";
 
 const ONBOARDING_GREETING =
   "Hi! I'm your AI interview coach. Tell me the company and role you're preparing for — for example, \"Verification Analyst at InstaVeritas\" — and I'll research it and get started.";
@@ -45,14 +46,10 @@ export default async function ChatConversationPage({
       : conversation.title ?? "New interview";
 
   const planTotal = conversation.plan.length;
-  const planProgress =
-    planTotal > 0
-      ? Math.min(conversation.planStepsDone, planTotal) / planTotal
-      : 0;
 
   return (
-    <div className="flex h-[calc(100dvh-2.75rem)] flex-col">
-      <div className="border-b border-border px-4 py-3">
+    <div className="flex h-[calc(100dvh-3rem)] flex-col">
+      <div className="border-b border-border px-4 py-2">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3">
           <Link
             href="/chat"
@@ -71,11 +68,16 @@ export default async function ChatConversationPage({
               <h1 className="text-sm font-semibold text-foreground">{title}</h1>
             </div>
             {isReady && planTotal > 0 && (
-              <div className="h-[3px] w-full overflow-hidden rounded-full bg-border">
-                <div
-                  className="h-full rounded-full bg-success transition-all duration-500"
-                  style={{ width: `${planProgress * 100}%` }}
-                />
+              <div className="flex w-full gap-1">
+                {conversation.plan.map((_, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "h-1 flex-1 rounded-full transition-colors duration-500",
+                      i < conversation.planStepsDone ? "bg-success" : "bg-border"
+                    )}
+                  />
+                ))}
               </div>
             )}
           </div>

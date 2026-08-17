@@ -10,17 +10,15 @@ import Link from "next/link";
 import { OtpVerifyForm } from "@/components/OtpVerifyForm";
 
 type SignupStep = "email" | "otp" | "details";
-type LoginStep = "email" | "method" | "password" | "otp";
+type LoginStep = "email" | "password" | "otp";
 
 const cardClass =
-  "flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-border bg-surface p-8 shadow-sm";
+  "flex w-full max-w-md flex-col gap-4 rounded-2xl border border-border bg-surface p-8 shadow-sm";
 const inputWrapClass =
   "flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-accent";
 const inputClass = "w-full bg-transparent text-sm text-foreground outline-none";
 const primaryButtonClass =
   "flex h-10 items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-accent to-accent-hover text-sm font-medium text-accent-foreground shadow-md shadow-accent/20 transition-all hover:brightness-110 hover:shadow-lg hover:shadow-accent/30 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
-const secondaryButtonClass =
-  "flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-background text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:opacity-60";
 const backLinkClass =
   "flex items-center gap-1 self-start text-sm text-muted hover:text-foreground";
 
@@ -170,7 +168,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         return;
       }
       setLoading(false);
-      setLoginStep("method");
+      setLoginStep("password");
     } catch {
       fail("Network error — please try again");
       setLoading(false);
@@ -251,6 +249,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         title="Enter your login code"
         onSubmit={handleLoginOtpSubmit}
         onResend={handleLoginOtpResend}
+        onSwitchToPassword={() => setLoginStep("password")}
       />
     );
   }
@@ -314,53 +313,6 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     );
   }
 
-  // ---------- Render: login method choice ----------
-
-  if (!isSignup && loginStep === "method") {
-    return (
-      <motion.div
-        animate={shake ? { x: [0, -8, 8, -6, 6, 0] } : {}}
-        transition={{ duration: 0.4 }}
-        className={cardClass}
-      >
-        <button
-          type="button"
-          onClick={() => setLoginStep("email")}
-          className={backLinkClass}
-        >
-          <ArrowLeft size={14} />
-          Back
-        </button>
-
-        <div className="mb-2 text-center">
-          <h1 className="text-xl font-semibold text-foreground">Welcome back</h1>
-          <p className="mt-1 text-sm text-muted">{email}</p>
-        </div>
-
-        {error && <p className="text-center text-sm text-danger">{error}</p>}
-
-        <button
-          type="button"
-          onClick={() => setLoginStep("password")}
-          className={primaryButtonClass}
-        >
-          <Lock size={16} />
-          Log in with password
-        </button>
-
-        <button
-          type="button"
-          onClick={handleSendLoginOtp}
-          disabled={loading}
-          className={secondaryButtonClass}
-        >
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
-          Email me a login code
-        </button>
-      </motion.div>
-    );
-  }
-
   // ---------- Render: login password step ----------
 
   if (!isSignup && loginStep === "password") {
@@ -373,7 +325,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       >
         <button
           type="button"
-          onClick={() => setLoginStep("method")}
+          onClick={() => setLoginStep("email")}
           className={backLinkClass}
         >
           <ArrowLeft size={14} />
@@ -416,6 +368,16 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         <button type="submit" disabled={loading} className={primaryButtonClass}>
           {loading && <Loader2 size={16} className="animate-spin" />}
           Log in
+        </button>
+
+        <button
+          type="button"
+          onClick={handleSendLoginOtp}
+          disabled={loading}
+          className="flex items-center justify-center gap-1.5 text-center text-sm font-medium text-accent hover:text-accent-hover disabled:opacity-60"
+        >
+          <KeyRound size={14} />
+          Log in with code instead
         </button>
       </motion.form>
     );
