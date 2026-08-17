@@ -42,10 +42,10 @@ Report:
 
 ${includeResearchWalkthrough && research ? `Company/role research:\n${research}` : ""}
 
-Keep it warm and encouraging even when the news isn't great — like a mentor who wants them to actually improve, not a scorecard. Use light markdown (short paragraphs, occasional **bold**, bullet points if listing multiple things) so it's easy to read, not a wall of text.
+Keep it warm and encouraging even when the news isn't great — like a professional mentor who wants them to actually improve, not a scorecard. Never use slang or casual address like "bro"/"bhai"/"yaar". Use light markdown (short paragraphs, occasional **bold**, bullet points if listing multiple things) so it's easy to read, not a wall of text.
 ${
   preferredLanguage !== "English"
-    ? `Write this whole message in ${preferredLanguage}, warm and informal, like a mentor talking to a friend.`
+    ? `Write this whole message in ${preferredLanguage}, warm but professional, like a knowledgeable career mentor, not a casual friend.`
     : ""
 }
 `.trim();

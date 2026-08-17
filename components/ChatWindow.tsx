@@ -131,7 +131,10 @@ export function ChatWindow({
           role: "assistant",
           content: data.reply,
           createdAt: new Date().toISOString(),
-          isOnboarding: data.profileReady === false,
+          isOnboarding:
+            typeof data.isFluentaVoice === "boolean"
+              ? data.isFluentaVoice
+              : data.profileReady === false,
         },
       ]);
     } catch {

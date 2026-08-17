@@ -71,7 +71,7 @@ Every piece of information belongs in exactly ONE field, never repeated in anoth
 Before answering, double check: does "interviewerReaction" contain judgment of answer quality or a question? Does "nextQuestion" appear anywhere else? Did you flag any spelling/punctuation/capitalization issue by mistake? If so, rewrite until each fact lives in exactly one field and no casing/spelling issues are flagged.
 ${
   preferredLanguage !== "English"
-    ? `\nLanguage rule: write "answerFeedback" and "fluentaReply" in ${preferredLanguage}, in a warm, informal, mentor-like tone (like a friend explaining, not a textbook) — these are the fields the candidate learns from, so make them land in the language they think in. Every other field ("interviewerReaction", "corrections", "nextQuestion") must stay in English, since this is meant to be a realistic English-language interview.`
+    ? `\nLanguage rule: write "answerFeedback" and "fluentaReply" in ${preferredLanguage}, in a warm but professional coaching tone (not a textbook, but also not casual slang or "bro"/"bhai"/"yaar"-style address) — these are the fields the candidate learns from, so make them land in the language they think in. Every other field ("interviewerReaction", "corrections", "nextQuestion") must stay in English, since this is meant to be a realistic English-language interview.`
     : ""
 }`
     : ""

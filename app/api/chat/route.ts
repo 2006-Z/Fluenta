@@ -150,6 +150,7 @@ export async function POST(request: Request) {
         reply: onboarding.reply,
         profileReady: false,
         messageId: created.id,
+        isFluentaVoice: true,
       });
     }
 
@@ -202,6 +203,7 @@ export async function POST(request: Request) {
         reply: confirmAsk.reply,
         profileReady: true,
         messageId: created.id,
+        isFluentaVoice: true,
       });
     } catch (error) {
       console.error("Confirm-ask failed:", error);
@@ -257,7 +259,12 @@ export async function POST(request: Request) {
       const created = await prisma.message.create({
         data: { conversationId, role: "assistant", content: intent.reply, isOnboarding: true },
       });
-      return NextResponse.json({ reply: intent.reply, profileReady: true, messageId: created.id });
+      return NextResponse.json({
+        reply: intent.reply,
+        profileReady: true,
+        messageId: created.id,
+        isFluentaVoice: true,
+      });
     }
 
     try {
@@ -294,6 +301,7 @@ export async function POST(request: Request) {
         profileReady: true,
         messageId: created.id,
         interviewStarted: true,
+        isFluentaVoice: false,
       });
     } catch (error) {
       console.error("Kickoff generation failed:", error);
@@ -379,6 +387,7 @@ export async function POST(request: Request) {
           messageId: created.id,
           interviewComplete: false,
           interviewStarted: true,
+          isFluentaVoice: false,
         });
       } catch (error) {
         console.error("Restart kickoff failed:", error);
@@ -397,6 +406,7 @@ export async function POST(request: Request) {
       reply: intent.reply,
       profileReady: true,
       messageId: created.id,
+      isFluentaVoice: true,
     });
   }
 
@@ -604,6 +614,7 @@ export async function POST(request: Request) {
       interviewTurnsDone,
       estimatedTurns: conversation.estimatedTurns,
       currentRoundType: rounds[Math.min(roundsDone, rounds.length - 1)]?.type ?? null,
+      isFluentaVoice,
     });
   } catch (error) {
     console.error("Chat completion failed:", error);
