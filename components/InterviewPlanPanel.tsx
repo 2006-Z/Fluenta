@@ -9,12 +9,14 @@ export function InterviewPlanPanel({
   steps,
   stepsDone,
   variant = "bar",
+  defaultOpen,
 }: {
   steps: string[];
   stepsDone: number;
   variant?: "bar" | "inline";
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(variant === "inline");
+  const [open, setOpen] = useState(defaultOpen ?? variant === "inline");
   const inline = variant === "inline";
 
   return (

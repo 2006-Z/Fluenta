@@ -41,12 +41,14 @@ export function ResearchPanel({
   research,
   subscribed,
   variant = "bar",
+  defaultOpen,
 }: {
   research: string;
   subscribed: boolean;
   variant?: "bar" | "inline";
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(variant === "inline");
+  const [open, setOpen] = useState(defaultOpen ?? variant === "inline");
   const sections = parseResearch(research);
   const { visible: visibleSections, truncated: isTruncated } = subscribed
     ? { visible: sections, truncated: false }
