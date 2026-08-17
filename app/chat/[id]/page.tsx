@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, Briefcase, PanelRight, Sparkles } from "lucide-react";
+import { ArrowLeft, Briefcase, Sparkles } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildInterviewGreeting } from "@/lib/interviewPrompt";
 import { ChatWindow } from "@/components/ChatWindow";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
+import { InsightsPopover, type InsightItem } from "@/components/InsightsPopover";
 import { cn } from "@/lib/utils";
 
 const ONBOARDING_GREETING =
@@ -45,11 +46,15 @@ export default async function ChatConversationPage({
       : conversation.title ?? "New interview";
 
   const planTotal = conversation.plan.length;
-  const hasInsights =
-    (isReady && Boolean(conversation.research)) ||
-    (isReady && planTotal > 0) ||
-    Boolean(conversation.report) ||
-    Boolean(conversation.lessons[0]);
+  const insightItems: InsightItem[] = [
+    isReady && conversation.research && { key: "research" as const, label: "Company research" },
+    isReady && planTotal > 0 && { key: "plan" as const, label: "Interview plan" },
+    conversation.report && { key: "report" as const, label: "Interview report" },
+    conversation.lessons[0] && {
+      key: "lesson" as const,
+      label: `Lesson: ${conversation.lessons[0].title}`,
+    },
+  ].filter((x): x is InsightItem => Boolean(x));
 
   return (
     <div className="flex h-[calc(100dvh-3rem)] flex-col">
@@ -85,15 +90,7 @@ export default async function ChatConversationPage({
               </div>
             )}
           </div>
-          {hasInsights && (
-            <Link
-              href={`/chat/${id}/insights`}
-              aria-label="Interview insights"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-            >
-              <PanelRight size={16} />
-            </Link>
-          )}
+          <InsightsPopover conversationId={id} items={insightItems} />
         </div>
       </div>
       <AttachmentsPanel attachments={conversation.attachments} />

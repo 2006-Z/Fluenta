@@ -21,9 +21,9 @@ export default async function ChatInsightsPlanPage({
       <div className="border-b border-border px-4 py-3">
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3">
           <Link
-            href={`/chat/${id}/insights`}
+            href={`/chat/${id}`}
             className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
-            aria-label="Back to insights"
+            aria-label="Back to conversation"
           >
             <ArrowLeft size={16} />
           </Link>
