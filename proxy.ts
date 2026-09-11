@@ -2,7 +2,22 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
+// The apex domain (no "www") is configured in Vercel to point at this same
+// deployment. Its root path shows a personal portfolio page instead of the
+// Fluenta landing page — everything else on that host (and every path on
+// www.fluenta.website) behaves exactly as before.
+const PORTFOLIO_HOST = "fluenta.website";
+
 export default async function proxy(req: NextRequest) {
+  const host = req.headers.get("host") || "";
+  if (host === PORTFOLIO_HOST && req.nextUrl.pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/roshan";
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set("x-portfolio-shell", "1");
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  }
+
   // Middleware only needs to know "logged in?" and "role?" — both live in the
   // JWT already, so decode the token directly instead of going through
   // auth()'s full session pipeline (which re-hits the database on every

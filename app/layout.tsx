@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { Navbar } from "@/components/Navbar";
@@ -20,7 +21,12 @@ export const metadata: Metadata = {
     "Practice fluent English for job interviews, pitches, networking, and professional writing with an AI coach.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Set by proxy.ts only for the apex-domain portfolio rewrite — that page
+  // has its own identity and shouldn't wear the Fluenta product chrome.
+  const isPortfolioShell =
+    (await headers()).get("x-portfolio-shell") === "1";
+
   return (
     <html
       lang="en"
@@ -28,18 +34,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Navbar />
+        {!isPortfolioShell && <Navbar />}
         {children}
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            style: {
-              background: "var(--surface)",
-              color: "var(--foreground)",
-              border: "1px solid var(--border)",
-            },
-          }}
-        />
+        {!isPortfolioShell && (
+          <Toaster
+            position="top-center"
+            toastOptions={{
+              style: {
+                background: "var(--surface)",
+                color: "var(--foreground)",
+                border: "1px solid var(--border)",
+              },
+            }}
+          />
+        )}
       </body>
     </html>
   );
