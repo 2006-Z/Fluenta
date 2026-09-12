@@ -2,21 +2,35 @@ import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
-// The apex domain (no "www") is configured in Vercel to point at this same
-// deployment. Its root path shows a personal portfolio page instead of the
-// Fluenta landing page — everything else on that host (and every path on
-// www.fluenta.website) behaves exactly as before.
-const PORTFOLIO_HOST = "fluenta.website";
+// Both the apex domain and "www" show the personal portfolio at "/" — the
+// actual Fluenta product lives at "/fluenta" instead (aliased below), so
+// every other real path (/chat, /login, /admin, ...) is completely
+// unaffected and keeps working exactly as it always has.
+const PORTFOLIO_HOSTS = new Set(["fluenta.website", "www.fluenta.website"]);
+const FLUENTA_ALIAS = "/fluenta";
 
 export default async function proxy(req: NextRequest) {
   const host = req.headers.get("host") || "";
-  if (host === PORTFOLIO_HOST && req.nextUrl.pathname === "/") {
+  const isPortfolioHost = PORTFOLIO_HOSTS.has(host);
+  const { pathname } = req.nextUrl;
+
+  if (isPortfolioHost && pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = "/roshan";
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set("x-portfolio-shell", "1");
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
+
+  // "/fluenta" (and anything under it) is an alias for the app's real,
+  // unprefixed routes — /fluenta -> /, /fluenta/chat -> /chat, etc. The
+  // auth logic below runs against this real path, not the external one.
+  const isFluentaAlias =
+    isPortfolioHost &&
+    (pathname === FLUENTA_ALIAS || pathname.startsWith(FLUENTA_ALIAS + "/"));
+  const realPathname = isFluentaAlias
+    ? pathname.slice(FLUENTA_ALIAS.length) || "/"
+    : pathname;
 
   // Middleware only needs to know "logged in?" and "role?" — both live in the
   // JWT already, so decode the token directly instead of going through
@@ -34,25 +48,30 @@ export default async function proxy(req: NextRequest) {
     secureCookie: process.env.NODE_ENV === "production",
   });
   const isLoggedIn = !!token;
-  const { pathname } = req.nextUrl;
-  const isAdminRoute = pathname.startsWith("/admin");
+  const isAdminRoute = realPathname.startsWith("/admin");
   const isProtected =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/chat") ||
+    realPathname.startsWith("/dashboard") ||
+    realPathname.startsWith("/chat") ||
     isAdminRoute;
 
   if (isProtected && !isLoggedIn) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+    loginUrl.searchParams.set("callbackUrl", realPathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname === "/" && isLoggedIn) {
+  if (realPathname === "/" && isLoggedIn) {
     return NextResponse.redirect(new URL("/chat", req.nextUrl.origin));
   }
 
   if (isAdminRoute && token?.role !== "admin") {
     return NextResponse.redirect(new URL("/chat", req.nextUrl.origin));
+  }
+
+  if (isFluentaAlias) {
+    const url = req.nextUrl.clone();
+    url.pathname = realPathname;
+    return NextResponse.rewrite(url);
   }
 }
 

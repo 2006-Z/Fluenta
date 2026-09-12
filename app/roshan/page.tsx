@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  Mail,
-  MapPin,
-  GraduationCap,
-  Sparkles,
-  Terminal as TerminalIcon,
-  Camera,
-  ArrowUpRight,
-} from "lucide-react";
+import Image from "next/image";
+import { Outfit, Fraunces } from "next/font/google";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
+const outfit = Outfit({ subsets: ["latin"], weight: ["400", "500", "600"] });
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["500", "600"] });
 
 export const metadata: Metadata = {
   title: "Roshan Kumar",
-  description:
-    "Roshan Kumar — building small AI-powered tools and apps, one project at a time.",
+  description: "Roshan Kumar",
 };
 
 // Inline brand marks: lucide-react 1.x dropped Github/Linkedin, so these are
@@ -33,183 +28,105 @@ function LinkedinMark(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+function ArrowGlyph(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" {...props}>
+      <path d="M7 17 17 7M9 7h8v8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
-const socials = [
-  {
-    label: "GitHub",
-    href: "https://github.com/2006-Z",
-    icon: GithubMark,
-  },
-  {
-    label: "LinkedIn",
-    href: "https://www.linkedin.com/in/mrs-player",
-    icon: LinkedinMark,
-  },
-  {
-    label: "Email",
-    href: "mailto:iamaroshankumar@gmail.com",
-    icon: Mail,
-  },
+const contacts = [
+  { label: "Email", href: "mailto:iamaroshankumar@gmail.com", icon: null },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/mrs-player", icon: LinkedinMark },
+  { label: "GitHub", href: "https://github.com/2006-Z", icon: GithubMark },
 ];
 
-const projects = [
-  {
-    title: "Fluenta AI",
-    tagline: "AI-powered, company-specific interview coach",
-    description:
-      "Tell it a company and role, it researches them live and roleplays that exact interview with you — correcting your English as you answer.",
-    stack: ["Next.js", "TypeScript", "Prisma", "NextAuth", "Vercel AI SDK"],
-    icon: Sparkles,
-    href: "https://www.fluenta.website",
-    linkLabel: "Visit live site",
-    status: "Live",
-  },
-  {
-    title: "Terminal",
-    tagline: "A low-cost, agentic AI coding assistant for the CLI",
-    description:
-      "Type a task into the terminal and it loops on its own — retrieving context, running shell commands in a popup window, and asking for input — until the job is done. Every AI call's token cost is tracked on a local dashboard.",
-    stack: ["Python", "SQLite", "LLM APIs"],
-    icon: TerminalIcon,
-    href: null,
-    linkLabel: "Runs locally · CLI tool",
-    status: "In progress",
-  },
-  {
-    title: "PCC Automation",
-    tagline: "Bulk police-verification screenshot tool",
-    description:
-      "Reads an Excel list of applications, drives a real browser through the UP Police PCC portal, and saves a screenshot of each result — turning a manual, one-by-one verification chore into an unattended batch run.",
-    stack: ["Node.js", "Express", "Playwright"],
-    icon: Camera,
-    href: null,
-    linkLabel: "Desktop tool",
-    status: "Live",
-  },
+const repos = [
+  { name: "PCC-Automation", href: "https://github.com/2006-Z/PCC-Automation" },
+  { name: "Terminal", href: "https://github.com/2006-Z/Terminal" },
+  { name: "Cute", href: "https://github.com/2006-Z/Cute" },
 ];
+
+const sites = [
+  { name: "Fluenta AI", href: "/fluenta" },
+  { name: "PCC Automation", href: "/pcc" },
+];
+
+function LinkRow({ name, href }: { name: string; href: string }) {
+  const isExternal = href.startsWith("http");
+  return (
+    <Link
+      href={href}
+      target={isExternal ? "_blank" : undefined}
+      rel={isExternal ? "noopener noreferrer" : undefined}
+      className="group flex items-center justify-between border-b border-border py-4 text-foreground transition-colors last:border-0 hover:text-accent"
+    >
+      <span className="text-[15px] font-medium">{name}</span>
+      <ArrowGlyph className="h-4 w-4 text-muted transition-colors group-hover:text-accent" />
+    </Link>
+  );
+}
 
 export default function PortfolioPage() {
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <header className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 pt-8">
-        <span className="text-sm font-medium text-muted">roshan.dev</span>
+    <div className={`min-h-full bg-background text-foreground ${outfit.className}`}>
+      <div className="flex justify-end px-6 pt-6">
         <ThemeToggle />
-      </header>
+      </div>
 
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-16 px-4 pb-24 pt-10">
-        {/* Hero */}
-        <section className="flex flex-col gap-5">
-          <span className="w-fit rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted">
-            Available for internships &amp; entry-level roles
-          </span>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-            Roshan Kumar
-          </h1>
-          <p className="max-w-xl text-lg text-muted">
-            I build small, real, end-to-end products — an AI interview coach,
-            an agentic CLI tool, and browser automation that replaces a
-            manual chore — while finishing my BCA.
-          </p>
+      <main className="mx-auto flex w-full max-w-md flex-col px-6 pb-24 pt-6">
+        <Image
+          src="/roshan-avatar.png"
+          alt="Roshan Kumar"
+          width={84}
+          height={84}
+          className="h-[84px] w-[84px] rounded-full object-cover"
+          priority
+        />
 
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted">
-            <span className="flex items-center gap-1.5">
-              <GraduationCap size={15} className="text-accent" />
-              BCA (in progress) — IGNOU
-            </span>
-            <span className="flex items-center gap-1.5">
-              <MapPin size={15} className="text-accent" />
-              New Delhi, India
-            </span>
-          </div>
+        <h1 className={`${fraunces.className} mt-6 text-[34px] leading-tight text-foreground`}>
+          Roshan Kumar
+        </h1>
 
-          <div className="mt-2 flex items-center gap-3">
-            {socials.map((s) => (
-              <Link
-                key={s.label}
-                href={s.href}
-                target={s.href.startsWith("http") ? "_blank" : undefined}
-                rel={s.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                aria-label={s.label}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface text-foreground transition-colors hover:bg-surface-hover hover:text-accent"
-              >
-                <s.icon size={17} />
-              </Link>
+        <div className="mt-5 flex items-center gap-5">
+          {contacts.map((c) => (
+            <Link
+              key={c.label}
+              href={c.href}
+              target={c.href.startsWith("http") ? "_blank" : undefined}
+              rel={c.href.startsWith("http") ? "noopener noreferrer" : undefined}
+              aria-label={c.label}
+              className="flex items-center gap-2 text-sm text-muted transition-colors hover:text-accent"
+            >
+              {c.icon ? <c.icon className="h-4 w-4" /> : null}
+              {c.label}
+            </Link>
+          ))}
+        </div>
+
+        <section className="mt-14">
+          <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+            GitHub Repositories
+          </h2>
+          <div className="mt-2">
+            {repos.map((r) => (
+              <LinkRow key={r.name} name={r.name} href={r.href} />
             ))}
           </div>
         </section>
 
-        {/* Projects */}
-        <section className="flex flex-col gap-5">
-          <h2 className="text-xl font-semibold">Projects</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {projects.map((p) => (
-              <div
-                key={p.title}
-                className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
-                    <p.icon size={19} />
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                      p.status === "Live"
-                        ? "bg-success-bg text-success"
-                        : "bg-accent/10 text-accent"
-                    }`}
-                  >
-                    {p.status}
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-foreground">{p.title}</h3>
-                  <p className="text-sm text-muted">{p.tagline}</p>
-                </div>
-
-                <p className="text-sm text-foreground/90">{p.description}</p>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {p.stack.map((t) => (
-                    <span
-                      key={t}
-                      className="rounded-full border border-border bg-background px-2.5 py-1 text-[11px] text-muted"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-
-                {p.href ? (
-                  <Link
-                    href={p.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 flex items-center gap-1 text-sm font-medium text-accent hover:text-accent-hover"
-                  >
-                    {p.linkLabel}
-                    <ArrowUpRight size={14} />
-                  </Link>
-                ) : (
-                  <span className="mt-1 text-sm font-medium text-muted">
-                    {p.linkLabel}
-                  </span>
-                )}
-              </div>
+        <section className="mt-12">
+          <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+            Websites
+          </h2>
+          <div className="mt-2">
+            {sites.map((s) => (
+              <LinkRow key={s.name} name={s.name} href={s.href} />
             ))}
           </div>
         </section>
       </main>
-
-      <footer className="mx-auto w-full max-w-4xl px-4 pb-10 text-xs text-muted">
-        © {new Date().getFullYear()} Roshan Kumar ·{" "}
-        <a
-          href="mailto:iamaroshankumar@gmail.com"
-          className="hover:text-accent"
-        >
-          iamaroshankumar@gmail.com
-        </a>
-      </footer>
     </div>
   );
 }
